@@ -7,7 +7,6 @@ StudyMuse is a Java desktop study assistant: a student uploads course materials,
 ## Stage 1 — Design (submitted)
 
 * [Stage 1 Design Report (PDF)](StudyMuse_Stage1_Report_FINAL.pdf)
-* [Stage 1 Design Report (Word)](StudyMuse_Stage1_Report_FINAL.docx)
 * [`diagrams/`](diagrams) — all UML diagrams drawn in UMLet: `.uxf` source files plus full-size `.png` images
 
   * CD-1 to CD-4: class diagrams
