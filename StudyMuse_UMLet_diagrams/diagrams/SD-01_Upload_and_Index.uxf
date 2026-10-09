@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>0</x>
+      <y>0</y>
+      <w>2220</w>
+      <h>1280</h>
+    </coordinates>
+    <panel_attributes>title=SD-01  Upload and Index Materials (UC01 / F01)
+obj=Student~s ACTOR
+obj=:MainWindow~mw
+obj=:StudyAgentController\n«Facade»~c
+obj=:MaterialService~ms
+obj=:DocumentReaderFactory\n«Factory»~f
+obj=:DocumentReader~r
+obj=:TextChunker~tc
+obj=:SearchIndex~ix
+obj=:CourseRepository~repo
+
+s-&gt;&gt;&gt;mw : select file, click Upload
+mw-&gt;&gt;&gt;c : uploadMaterial(courseId, file)
+c-&gt;&gt;&gt;ms : upload(courseId, file)
+ms-&gt;&gt;&gt;f : createReader(file)
+combinedFragment=alt~a1; f:[supported type]
+f.&gt;ms : reader (Pdf / PlainText)
+ms-&gt;&gt;&gt;r : readText(file)
+r.&gt;ms : full text
+ms-&gt;&gt;&gt;tc : split(materialId, text)
+tc.&gt;ms : chunks (about 500 words each)
+ms-&gt;&gt;&gt;ix : add(chunks)
+ms-&gt;&gt;&gt;repo : saveMaterial(courseId, material)
+repo.&gt;ms
+ms.&gt;c : Material (page count, chunk count)
+c.&gt;mw : Material
+mw.&gt;s : show in Course panel
+..=a1; f:[unsupported type or file\nover 20 MB]
+f.&gt;ms : error
+ms.&gt;c : error, nothing saved
+c.&gt;mw : error
+mw.&gt;s : show supported file types
+..=a1; r:[empty or image-only PDF]
+ms-&gt;&gt;&gt;r : readText(file)
+r.&gt;ms : no text
+ms-&gt;&gt;&gt;repo : saveMaterial(courseId, material)
+ms.&gt;c : Material without chunks
+c.&gt;mw : Material
+mw.&gt;s : warning: no text found
+--=a1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+</diagram>

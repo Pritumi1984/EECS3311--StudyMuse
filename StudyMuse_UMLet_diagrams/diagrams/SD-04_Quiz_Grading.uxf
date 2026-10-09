@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>0</x>
+      <y>0</y>
+      <w>3600</w>
+      <h>1400</h>
+    </coordinates>
+    <panel_attributes>title=SD-04  Quiz Taking and Grading (UC08 / F08)
+obj=Student~s ACTOR
+obj=:MainWindow~mw
+obj=:StudyAgentController\n«Facade»~c
+obj=:QuizService~qs
+obj=:MultipleChoiceGrader~mc
+obj=:ShortAnswerGrader~sa
+obj=:LLMClient~llm
+obj=:CourseRepository~repo
+obj=:ProgressTracker\n«Subject»~pt
+obj=:DashboardView\n«Observer»~dv
+
+s-&gt;&gt;&gt;mw : answer questions, click Submit
+mw-&gt;&gt;&gt;c : submitQuiz(quizId, answers)
+c-&gt;&gt;&gt;qs : grade(quiz, answers)
+combinedFragment=loop~l1; qs:[for each question]
+combinedFragment=alt~a1; qs:[MULTIPLE_CHOICE]
+qs-&gt;&gt;&gt;mc : grade(q, answer)  via GradingStrategy
+mc.&gt;qs : GradeResult (exact key check)
+..=a1; qs:[SHORT_ANSWER]
+qs-&gt;&gt;&gt;sa : grade(q, answer)  via GradingStrategy
+sa-&gt;&gt;&gt;llm : complete(answer + model answer + rubric)
+llm.&gt;sa : score 0 / 0.5 / 1 + reason
+sa.&gt;qs : GradeResult
+..=a1; qs:[blank answer]
+qs-&gt;&gt;&gt;qs + : score 0,\nno LLM call
+tick=
+..=a1; qs:[LLM unavailable]
+qs-&gt;&gt;&gt;qs + : mark answer\npending
+tick=
+--=a1
+--=l1
+qs-&gt;&gt;&gt;llm : complete(explain each wrong answer)
+llm.&gt;qs : explanations
+qs-&gt;&gt;&gt;repo : saveQuizResult(result)
+qs-&gt;&gt;&gt;pt : recordQuizResult(result)
+pt-&gt;&gt;&gt;pt + : notifyObservers\n(event)
+tick=
+pt-&gt;&gt;&gt;dv : onProgressUpdated(event)
+dv-&gt;&gt;&gt;pt : getStats(courseId)
+pt.&gt;dv : ProgressStats
+dv-&gt;&gt;&gt;dv + : render(stats)
+tick=
+qs.&gt;c : QuizResult
+c.&gt;mw : QuizResult
+mw.&gt;s : score + per-question feedback</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+</diagram>

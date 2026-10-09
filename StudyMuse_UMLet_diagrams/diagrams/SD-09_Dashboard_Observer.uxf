@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>0</x>
+      <y>0</y>
+      <w>2430</w>
+      <h>1160</h>
+    </coordinates>
+    <panel_attributes>title=SD-09  Progress Dashboard Live Update via Observer (UC11 / F11)
+obj=Student~s ACTOR
+obj=:MainWindow~mw
+obj=:StudyAgentController\n«Facade»~c
+obj=:DashboardView\n«Observer»~dv
+obj=:QuizService~qs
+obj=:ProgressTracker\n«Subject»~pt
+obj=:CourseRepository~repo
+
+dv-&gt;&gt;&gt;pt : addObserver(this)  at startup
+s-&gt;&gt;&gt;mw : submit a quiz
+mw-&gt;&gt;&gt;c : submitQuiz(quizId, answers)
+c-&gt;&gt;&gt;qs : grade(quiz, answers)
+qs-&gt;&gt;&gt;pt : recordQuizResult(result)  (FlashcardService: recordReview)
+pt-&gt;&gt;&gt;pt + : notifyObservers\n(event)
+tick=
+pt-&gt;&gt;&gt;dv : onProgressUpdated(event)
+dv-&gt;&gt;&gt;pt : getStats(courseId)
+pt-&gt;&gt;&gt;repo : findQuizResults(courseId)
+repo.&gt;pt : records
+pt.&gt;dv : ProgressStats
+dv-&gt;&gt;&gt;dv + : render(stats)
+tick=
+dv.&gt;s : charts refresh automatically
+s-&gt;&gt;&gt;mw : open Dashboard tab
+mw-&gt;&gt;&gt;c : getProgress(courseId)
+c-&gt;&gt;&gt;pt : getStats(courseId)
+pt.&gt;c : ProgressStats
+c.&gt;mw : ProgressStats
+mw-&gt;&gt;&gt;dv : render(stats)
+combinedFragment=alt~a1; dv:[no activity yet]
+dv.&gt;s : empty state: suggests a first step
+..=a1; dv:[activity recorded]
+dv.&gt;s : average score, trend, cards mastered, minutes
+--=a1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+</diagram>

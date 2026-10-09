@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>0</x>
+      <y>0</y>
+      <w>2890</w>
+      <h>1180</h>
+    </coordinates>
+    <panel_attributes>title=SD-05  Flashcard Review with Spaced Repetition (UC06 / F06)
+obj=Student~s ACTOR
+obj=:MainWindow~mw
+obj=:StudyAgentController\n«Facade»~c
+obj=:FlashcardService~fs
+obj=:SpacedRepetition\nScheduler~sch
+obj=:CourseRepository~repo
+obj=:ProgressTracker\n«Subject»~pt
+obj=:DashboardView\n«Observer»~dv
+
+s-&gt;&gt;&gt;mw : open Review
+mw-&gt;&gt;&gt;c : getDueCards(courseId, today)
+c-&gt;&gt;&gt;fs : getDueCards(courseId, today)
+fs-&gt;&gt;&gt;repo : findCourse(courseId)
+repo.&gt;fs : Course with decks
+fs.&gt;c : due cards
+c.&gt;mw : due cards
+combinedFragment=alt~a1; mw:[no cards due]
+mw.&gt;s : show date of next due card
+..=a1; mw:[cards due]
+combinedFragment=loop~l1; mw:[for each due card]
+mw.&gt;s : show front, Flip, show back
+s-&gt;&gt;&gt;mw : rate Again / Hard / Good / Easy
+mw-&gt;&gt;&gt;c : reviewCard(cardId, rating)
+c-&gt;&gt;&gt;fs : review(card, rating)
+fs-&gt;&gt;&gt;sch : nextReview(card, rating)
+sch.&gt;fs : next review date (SM-2)
+fs-&gt;&gt;&gt;repo : saveDeck(deck)
+fs-&gt;&gt;&gt;pt : recordReview(card, rating)
+pt-&gt;&gt;&gt;pt + : notifyObservers\n(event)
+tick=
+pt-&gt;&gt;&gt;dv : onProgressUpdated(event)
+fs.&gt;c : Flashcard
+c.&gt;mw : Flashcard
+--=l1
+mw.&gt;s : session statistics
+--=a1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+</diagram>

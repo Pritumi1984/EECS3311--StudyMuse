@@ -1,0 +1,769 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>-50</y>
+      <w>900</w>
+      <h>40</h>
+    </coordinates>
+    <panel_attributes>*CD-4  Documents &amp; Retrieval, Domain Model and Persistence*
+fontsize=16</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>8</x>
+      <y>1083</y>
+      <w>1512</w>
+      <h>382</h>
+    </coordinates>
+    <panel_attributes>documents
+bg=#F7F9FC</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>93</x>
+      <y>8</y>
+      <w>1951</w>
+      <h>817</h>
+    </coordinates>
+    <panel_attributes>domain
+bg=#F7F9FC</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>78</x>
+      <y>833</y>
+      <w>738</w>
+      <h>242</h>
+    </coordinates>
+    <panel_attributes>persistence
+bg=#F7F9FC</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>468</x>
+      <y>1252</y>
+      <w>280</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>«interface»
+/DocumentReader/
+--
+--
++supports(extension : String) : boolean
++readText(file : Path) : String
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>46</x>
+      <y>1127</y>
+      <w>280</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>«Adapter»
+*PdfDocumentReader*
+--
+-stripper : PDFTextStripper
+--
++supports(extension : String) : boolean
++readText(file : Path) : String
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>46</x>
+      <y>1262</y>
+      <w>280</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*PlainTextDocumentReader*
+--
+--
++supports(extension : String) : boolean
++readText(file : Path) : String
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>473</x>
+      <y>1142</y>
+      <w>270</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>«Adaptee, Apache PDFBox»
+*PDFTextStripper*
+--
+--
++getText(doc : PDDocument) : String
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>26</x>
+      <y>1367</y>
+      <w>320</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>«Factory»
+*DocumentReaderFactory*
+--
+--
++createReader(file : Path) : DocumentReader
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1097</x>
+      <y>1127</y>
+      <w>370</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*TextChunker*
+--
+-chunkSize : int = 500
+--
++split(materialId : String, text : String) : List&lt;Chunk&gt;
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1062</x>
+      <y>1232</y>
+      <w>440</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*SearchIndex*
+--
+-termIndex : Map&lt;String, List&lt;Chunk&gt; &gt;
+--
++add(chunks : List&lt;Chunk&gt;) : void
++search(courseId : String, query : String, k : int) : List&lt;Chunk&gt;
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>870</x>
+      <y>425</y>
+      <w>120</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*Course*
+--
+-id : String
+-name : String
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1172</x>
+      <y>597</y>
+      <w>220</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*Material*
+--
+-id : String
+-fileName : String
+-uploadedAt : LocalDateTime
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1619</x>
+      <y>707</y>
+      <w>110</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*Chunk*
+--
+-id : String
+-index : int
+-text : String
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1579</x>
+      <y>602</y>
+      <w>190</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*Summary*
+--
+-text : String
+-length : SummaryLength
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1192</x>
+      <y>472</y>
+      <w>180</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*Concept*
+--
+-name : String
+-definition : String
+-sourceChunkId : String
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1222</x>
+      <y>367</y>
+      <w>120</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*Deck*
+--
+-id : String
+-name : String
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1574</x>
+      <y>437</y>
+      <w>200</w>
+      <h>140</h>
+    </coordinates>
+    <panel_attributes>*Flashcard*
+--
+-front : String
+-back : String
+-topic : String
+-intervalDays : int
+-easeFactor : double = 2.5
+-nextReview : LocalDate
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1202</x>
+      <y>262</y>
+      <w>160</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*Quiz*
+--
+-id : String
+-difficulty : Difficulty
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1584</x>
+      <y>282</y>
+      <w>180</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>*Question*
+--
+-text : String
+-type : QuestionType
+-options : List&lt;String&gt;
+-correctAnswer : String
+-topic : String
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1861</x>
+      <y>312</y>
+      <w>150</w>
+      <h>90</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*QuestionType*
+--
+MULTIPLE_CHOICE
+SHORT_ANSWER
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1579</x>
+      <y>157</y>
+      <w>190</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*QuizResult*
+--
+-quizId : String
+-score : double
+-takenAt : LocalDateTime
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1846</x>
+      <y>177</y>
+      <w>180</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>*GradeResult*
+--
+-questionId : String
+-studentAnswer : String
+-score : double
+-feedback : String
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>111</x>
+      <y>380</y>
+      <w>150</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*WeakTopic*
+--
+-topic : String
+-accuracy : double
+-diagnosis : String
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1192</x>
+      <y>95</y>
+      <w>180</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*StudyPlan*
+--
+-examDate : LocalDate
+-dailyHours : double
+--
++totalMinutes() : int
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1599</x>
+      <y>52</y>
+      <w>150</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*StudyDay*
+--
+-date : LocalDate
+--
++totalMinutes() : int
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1851</x>
+      <y>52</y>
+      <w>170</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>*StudySession*
+--
+-topic : String
+-activity : ActivityType
+-minutes : int
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1207</x>
+      <y>722</y>
+      <w>150</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*Answer*
+--
+-text : String
+-verified : boolean
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>418</x>
+      <y>877</y>
+      <w>380</w>
+      <h>180</h>
+    </coordinates>
+    <panel_attributes>«interface»
+/CourseRepository/
+--
+--
++saveCourse(c : Course) : void
++findCourse(id : String) : Optional&lt;Course&gt;
++saveMaterial(courseId : String, m : Material) : void
++saveQuizResult(r : QuizResult) : void
++findQuizResults(courseId : String) : List&lt;QuizResult&gt;
++saveDeck(d : Deck) : void
++savePlan(p : StudyPlan) : void
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>96</x>
+      <y>927</y>
+      <w>180</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*JsonCourseRepository*
+--
+-dataDir : Path
+-gson : Gson
+--
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>161</x>
+      <y>1212</y>
+      <w>332</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;&gt;</panel_attributes>
+    <additional_attributes>25.0;25.3;25.0;45.0;306.8;45.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>301</x>
+      <y>1157</y>
+      <w>197</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m2=1
+adapts</panel_attributes>
+    <additional_attributes>25.2;25.0;171.9;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>301</x>
+      <y>1277</y>
+      <w>192</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;&gt;</panel_attributes>
+    <additional_attributes>25.2;25.0;166.9;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>311</x>
+      <y>1322</y>
+      <w>182</w>
+      <h>70</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;
+creates</panel_attributes>
+    <additional_attributes>25.0;45.0;25.0;25.0;156.6;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1405</x>
+      <y>737</y>
+      <w>239</w>
+      <h>415</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;
+creates</panel_attributes>
+    <additional_attributes>25.0;389.7;25.0;25.0;213.9;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1460</x>
+      <y>757</y>
+      <w>184</w>
+      <h>500</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m2=0..*</panel_attributes>
+    <additional_attributes>25.0;474.8;25.0;25.0;158.8;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>965</x>
+      <y>469</y>
+      <w>242</w>
+      <h>153</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=0..*</panel_attributes>
+    <additional_attributes>25.0;25.0;217.0;25.0;217.0;127.9</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>965</x>
+      <y>458</y>
+      <w>252</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=0..*</panel_attributes>
+    <additional_attributes>25.1;25.0;226.7;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>965</x>
+      <y>416</y>
+      <w>282</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=0..*</panel_attributes>
+    <additional_attributes>25.1;25.5;256.8;25.5</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>965</x>
+      <y>317</y>
+      <w>272</w>
+      <h>144</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=0..*</panel_attributes>
+    <additional_attributes>25.1;119.0;247.0;119.0;247.0;25.2</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>965</x>
+      <y>170</y>
+      <w>257</w>
+      <h>285</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=0..1</panel_attributes>
+    <additional_attributes>25.2;260.5;232.0;260.5;232.0;25.1</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1350</x>
+      <y>672</y>
+      <w>294</w>
+      <h>67</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=1..*</panel_attributes>
+    <additional_attributes>25.0;25.1;25.0;42.5;268.8;42.5</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1367</x>
+      <y>617</y>
+      <w>237</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=0..1</panel_attributes>
+    <additional_attributes>25.2;25.0;211.9;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1317</x>
+      <y>417</y>
+      <w>282</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=0..*</panel_attributes>
+    <additional_attributes>25.4;25.0;256.9;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1337</x>
+      <y>287</y>
+      <w>272</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=1..30</panel_attributes>
+    <additional_attributes>25.3;25.0;246.9;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1337</x>
+      <y>232</y>
+      <w>362</w>
+      <h>65</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-
+m1=1
+m2=0..*</panel_attributes>
+    <additional_attributes>25.3;40.0;337.0;40.0;337.0;25.3</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1739</x>
+      <y>332</y>
+      <w>147</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=-&gt;</panel_attributes>
+    <additional_attributes>25.2;25.0;121.9;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1744</x>
+      <y>192</y>
+      <w>127</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=1..*</panel_attributes>
+    <additional_attributes>25.3;25.0;102.0;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1347</x>
+      <y>88</y>
+      <w>276</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=1..*</panel_attributes>
+    <additional_attributes>25.4;25.5;251.8;25.5</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1724</x>
+      <y>67</y>
+      <w>152</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m2=1..*</panel_attributes>
+    <additional_attributes>25.1;25.0;126.8;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1332</x>
+      <y>717</y>
+      <w>312</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-
+m2=0..5
+sources</panel_attributes>
+    <additional_attributes>25.1;25.0;286.7;25.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>773</x>
+      <y>480</y>
+      <w>182</w>
+      <h>512</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;
+stores</panel_attributes>
+    <additional_attributes>25.1;487.0;157.0;487.0;157.0;25.2</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>251</x>
+      <y>942</y>
+      <w>192</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;&gt;</panel_attributes>
+    <additional_attributes>25.0;25.0;166.9;25.0</additional_attributes>
+  </element>
+</diagram>
