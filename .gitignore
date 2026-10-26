@@ -1,0 +1,18 @@
+# Local secrets - never commit real API keys
+.env
+.env.*
+!.env.example
+config.local.json
+
+# Build output, runtime data and logs
+out/
+sources.txt
+data/
+logs/
+*.class
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
