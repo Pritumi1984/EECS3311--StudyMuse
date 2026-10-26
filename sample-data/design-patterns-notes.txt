@@ -1,0 +1,31 @@
+EECS3311 Study Notes: Design Patterns
+
+A design pattern is a reusable, named solution to a problem that keeps appearing in object-oriented design. A pattern is not finished code. It is a description of classes, their roles and how they collaborate, which a developer adapts to the problem at hand. Patterns give a team a shared vocabulary: saying "use a Facade here" communicates a whole structure in two words. The classic catalogue groups patterns into three families. Creational patterns abstract how objects are created. Structural patterns describe how classes and objects are combined into larger structures. Behavioural patterns describe how objects communicate and divide responsibility.
+
+Creational patterns
+
+The Singleton pattern ensures a class has exactly one instance and provides a global access point to it. The constructor is private, the single instance is stored in a static field, and a static getInstance method returns it. Singleton is useful for shared configuration or a logging service, but it should be used sparingly because global state makes classes harder to test.
+
+The Factory Method pattern lets a class defer the decision of which concrete class to instantiate. Client code asks a factory for an object of an interface type, and the factory chooses the concrete subclass based on parameters such as a file extension or a configuration value. The benefit is that client code never contains long if-else chains on types, and adding a new product only requires a new class and a small change in the factory.
+
+The Abstract Factory pattern goes one level higher: it is a factory that returns a family of related objects, for example a GUI factory that returns Windows-style buttons and menus or Mac-style buttons and menus. The Builder pattern separates the construction of a complex object from its representation. A builder offers step methods such as withTitle or withContext and a final build method, which is much clearer than a constructor with many optional parameters. The Prototype pattern creates new objects by copying an existing template object, which is useful when creation is expensive.
+
+Structural patterns
+
+The Adapter pattern converts the interface of an existing class into the interface that clients expect. An object adapter holds a reference to the adaptee and translates each call. Adapters are common when integrating third-party libraries or web APIs, because the rest of the system can depend on its own interface instead of the vendor's format.
+
+The Facade pattern provides one simple, unified interface to a complex subsystem. Clients talk only to the facade, which delegates to many internal classes. A facade reduces coupling: if the subsystem changes, only the facade needs to change. The Decorator pattern attaches additional responsibilities to an object dynamically by wrapping it in another object with the same interface. Decorators can be stacked, for example wrapping a data source first with compression and then with encryption. This is a flexible alternative to creating a subclass for every combination of features.
+
+The Composite pattern composes objects into tree structures so that clients treat individual objects and groups uniformly, such as files and folders. The Proxy pattern provides a placeholder that controls access to another object, for example to load an expensive image lazily. The Bridge pattern separates an abstraction from its implementation so the two can vary independently. The Flyweight pattern shares many small objects to save memory.
+
+Behavioural patterns
+
+The Strategy pattern defines a family of interchangeable algorithms behind one interface. The context object holds a reference to a strategy and delegates the work to it, so the algorithm can be swapped at runtime without changing the context. Sorting with different comparators and grading questions with different graders are typical examples.
+
+The Observer pattern defines a one-to-many dependency: when the subject changes state, all registered observers are notified automatically. The subject only knows the observer interface, so new observers can be added without modifying the subject. Graphical user interfaces use Observer heavily, for example to refresh a chart when data changes.
+
+The Command pattern turns a request into an object with an execute method, which makes it possible to queue requests, log them or undo them. The State pattern lets an object change its behaviour when its internal state changes by delegating to state objects. The Template Method pattern defines the skeleton of an algorithm in a base class and lets subclasses override specific steps. The Iterator pattern provides a way to access the elements of a collection sequentially without exposing its internal representation.
+
+Choosing patterns
+
+A pattern should only be used when it solves an identifiable problem. Adding patterns to satisfy a count makes code more complex without benefit. Good reasons include removing duplicated conditional logic, isolating code that is likely to change, making components testable in isolation, and reducing coupling between layers. Model-View-Controller is an architectural pattern that separates the data model, the user interface views and the controller that handles input, so that several views such as a GUI and a command line can share the same logic.
