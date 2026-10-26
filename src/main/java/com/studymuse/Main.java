@@ -15,6 +15,7 @@ import com.studymuse.persistence.JsonCourseRepository;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
+import com.studymuse.ui.MainWindow;
 import com.studymuse.ui.StudyCLI;
 
 import java.util.Arrays;
@@ -46,8 +47,10 @@ public final class Main {
 
     public static void main(String[] args) {
         StudyAgentController controller = buildController();
-        String[] rest = args.length > 0 ? Arrays.copyOfRange(args, 1, args.length) : new String[0];
-        // The Swing GUI is added in a later commit; until then every mode runs the CLI.
-        new StudyCLI(controller).run(rest);
+        if (args.length > 0 && args[0].equalsIgnoreCase("cli")) {
+            new StudyCLI(controller).run(Arrays.copyOfRange(args, 1, args.length));
+        } else {
+            MainWindow.launch(controller);
+        }
     }
 }
