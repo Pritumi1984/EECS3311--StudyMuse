@@ -2,6 +2,7 @@ package com.studymuse.ui;
 
 import com.studymuse.controller.StudyAgentController;
 import com.studymuse.domain.Answer;
+import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.Summary;
@@ -34,6 +35,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.io.File;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -58,6 +60,7 @@ public final class MainWindow implements StudyView {
     private final JTextArea summaryArea = outputArea();
     private final JTextField questionField = new JTextField();
     private final JTextArea answerArea = outputArea();
+    private final JTextArea conceptArea = outputArea();
     private final JLabel status = new JLabel();
     private final JTabbedPane tabs = new JTabbedPane();
 
@@ -153,6 +156,17 @@ public final class MainWindow implements StudyView {
         askPanel.add(askTop, BorderLayout.NORTH);
         askPanel.add(new JScrollPane(answerArea), BorderLayout.CENTER);
         tabs.addTab("Ask (F03)", askPanel);
+
+        // F04 Concepts
+        JButton extract = new JButton("Extract Concepts");
+        extract.addActionListener(e -> onExtractConceptsClicked());
+        JPanel conTop = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        conTop.add(new JLabel("Find the key terms of the selected material:"));
+        conTop.add(extract);
+        JPanel conPanel = new JPanel(new BorderLayout(4, 4));
+        conPanel.add(conTop, BorderLayout.NORTH);
+        conPanel.add(new JScrollPane(conceptArea), BorderLayout.CENTER);
+        tabs.addTab("Concepts (F04)", conPanel);
         return tabs;
     }
 
@@ -245,6 +259,28 @@ public final class MainWindow implements StudyView {
                     answerArea.setCaretPosition(0);
                 },
                 answerArea);
+    }
+
+    void onExtractConceptsClicked() {
+        Course course = courseList.getSelectedValue();
+        Material material = materialList.getSelectedValue();
+        if (course == null || material == null) {
+            showError("Select a course and one of its materials first.");
+            return;
+        }
+        conceptArea.setText("Extracting concepts from " + material.getFileName() + " ...");
+        runInBackground("Extracting concepts with " + controller.getLlmName() + " ...",
+                () -> controller.extractConcepts(course.getId(), material.getId()),
+                (List<Concept> concepts) -> {
+                    StringBuilder sb = new StringBuilder(concepts.size() + " key concepts in " + material.getFileName() + "\n\n");
+                    for (Concept c : concepts) {
+                        sb.append(c.getName()).append("\n    ").append(c.getDefinition()).append("\n\n");
+                    }
+                    conceptArea.setText(sb.toString());
+                    conceptArea.setCaretPosition(0);
+                    refreshCourses(course.getId());
+                },
+                conceptArea);
     }
 
     // ------------------------------------------------------------------ helpers

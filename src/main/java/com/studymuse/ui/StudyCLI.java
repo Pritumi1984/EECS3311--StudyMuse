@@ -2,6 +2,7 @@ package com.studymuse.ui;
 
 import com.studymuse.controller.StudyAgentController;
 import com.studymuse.domain.Answer;
+import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.Summary;
@@ -97,6 +98,15 @@ public class StudyCLI implements StudyView {
                     Answer a = controller.askQuestion(t.get(1), question);
                     showResult(a.toText());
                 }
+                case "concepts" -> {
+                    need(t, 3, "concepts <courseId> <material>");
+                    showResult("Extracting key concepts with " + controller.getLlmName() + " ...");
+                    StringBuilder sb = new StringBuilder("Key concepts:\n");
+                    for (Concept c : controller.extractConcepts(t.get(1), t.get(2))) {
+                        sb.append("  * ").append(c.getName()).append(": ").append(c.getDefinition()).append('\n');
+                    }
+                    showResult(sb.toString());
+                }
                 default -> showError("Unknown command '" + cmd + "'. Type 'help'.");
             }
         } catch (StudyException | IllegalArgumentException e) {
@@ -177,6 +187,7 @@ public class StudyCLI implements StudyView {
                   materials <courseId>                 list a course's materials
                   summarize <courseId> <material> [short|medium|detailed]   AI summary (F02)
                   ask <courseId> <question>            answer from your materials with sources (F03)
+                  concepts <courseId> <material>       extract key concepts with definitions (F04)
                   help | exit""";
     }
 

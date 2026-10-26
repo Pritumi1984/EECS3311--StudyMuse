@@ -1,6 +1,7 @@
 package com.studymuse.controller;
 
 import com.studymuse.domain.Answer;
+import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.Summary;
@@ -56,6 +57,14 @@ public class StudyAgentController {
     public Summary summarize(String courseId, String materialIdOrName, SummaryLength length) {
         Material material = materialService.getMaterial(courseId, materialIdOrName);
         return analysisService.summarize(materialService.getCourse(courseId).getId(), material, length);
+    }
+
+    // ---------------------------------------------------------------- F04 key concept extraction
+
+    public List<Concept> extractConcepts(String courseId, String materialIdOrName) {
+        Course course = materialService.getCourse(courseId);
+        Material material = materialService.getMaterial(courseId, materialIdOrName);
+        return analysisService.extractConcepts(course, material);
     }
 
     // ---------------------------------------------------------------- F03 question answering
