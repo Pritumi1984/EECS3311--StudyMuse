@@ -1,8 +1,11 @@
 package com.studymuse.ui;
 
 import com.studymuse.controller.StudyAgentController;
+import com.studymuse.domain.Answer;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.Summary;
+import com.studymuse.domain.SummaryLength;
 import com.studymuse.services.DuplicateMaterialException;
 import com.studymuse.services.StudyException;
 
@@ -80,9 +83,23 @@ public class StudyCLI implements StudyView {
                     boolean replace = t.contains("--replace");
                     upload(t.get(1), t.get(2), replace);
                 }
+                case "summarize" -> {
+                    need(t, 3, "summarize <courseId> <material> [short|medium|detailed]");
+                    SummaryLength len = SummaryLength.parse(t.size() > 3 ? t.get(3) : "medium");
+                    showResult("Summarizing with " + controller.getLlmName() + " ...");
+                    Summary s = controller.summarize(t.get(1), t.get(2), len);
+                    showResult(s.toText());
+                }
+                case "ask" -> {
+                    need(t, 3, "ask <courseId> <question>");
+                    String question = String.join(" ", t.subList(2, t.size()));
+                    showResult("Searching your materials and asking " + controller.getLlmName() + " ...");
+                    Answer a = controller.askQuestion(t.get(1), question);
+                    showResult(a.toText());
+                }
                 default -> showError("Unknown command '" + cmd + "'. Type 'help'.");
             }
-        } catch (StudyException e) {
+        } catch (StudyException | IllegalArgumentException e) {
             showError(e.getMessage());
         } catch (RuntimeException e) {
             showError("Unexpected error: " + e);
@@ -158,6 +175,8 @@ public class StudyCLI implements StudyView {
                   course create <name>                 create a course (F01)
                   upload <courseId> <file> [--replace] import a .txt/.md file (F01)
                   materials <courseId>                 list a course's materials
+                  summarize <courseId> <material> [short|medium|detailed]   AI summary (F02)
+                  ask <courseId> <question>            answer from your materials with sources (F03)
                   help | exit""";
     }
 

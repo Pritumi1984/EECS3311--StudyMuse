@@ -1,5 +1,7 @@
 package com.studymuse;
 
+import com.studymuse.agent.ResponseParser;
+import com.studymuse.agent.StructuredLLMCall;
 import com.studymuse.config.AppConfig;
 import com.studymuse.controller.StudyAgentController;
 import com.studymuse.documents.DocumentReaderFactory;
@@ -10,7 +12,9 @@ import com.studymuse.llm.LLMProvider;
 import com.studymuse.llm.LLMProviderFactory;
 import com.studymuse.persistence.CourseRepository;
 import com.studymuse.persistence.JsonCourseRepository;
+import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
+import com.studymuse.services.QAService;
 import com.studymuse.ui.StudyCLI;
 
 import java.util.Arrays;
@@ -34,7 +38,10 @@ public final class Main {
         SearchIndex index = new SearchIndex();
         MaterialService materials = new MaterialService(new DocumentReaderFactory(), new TextChunker(), index, repository);
         materials.rebuildIndex();
-        return new StudyAgentController(materials, llm.getProviderName());
+        StructuredLLMCall ai = new StructuredLLMCall(llm, new ResponseParser());
+        MaterialAnalysisService analysis = new MaterialAnalysisService(ai, repository);
+        QAService qa = new QAService(index, ai);
+        return new StudyAgentController(materials, analysis, qa, llm.getProviderName());
     }
 
     public static void main(String[] args) {

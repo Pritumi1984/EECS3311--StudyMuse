@@ -1,8 +1,13 @@
 package com.studymuse.controller;
 
+import com.studymuse.domain.Answer;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.Summary;
+import com.studymuse.domain.SummaryLength;
+import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
+import com.studymuse.services.QAService;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -16,10 +21,15 @@ import java.util.List;
 public class StudyAgentController {
 
     private final MaterialService materialService;
+    private final MaterialAnalysisService analysisService;
+    private final QAService qaService;
     private final String llmName;
 
-    public StudyAgentController(MaterialService materialService, String llmName) {
+    public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
+                                QAService qaService, String llmName) {
         this.materialService = materialService;
+        this.analysisService = analysisService;
+        this.qaService = qaService;
         this.llmName = llmName;
     }
 
@@ -39,6 +49,19 @@ public class StudyAgentController {
 
     public Material uploadMaterial(String courseId, Path file, boolean replaceExisting) {
         return materialService.upload(courseId, file, replaceExisting);
+    }
+
+    // ---------------------------------------------------------------- F02 summarization
+
+    public Summary summarize(String courseId, String materialIdOrName, SummaryLength length) {
+        Material material = materialService.getMaterial(courseId, materialIdOrName);
+        return analysisService.summarize(materialService.getCourse(courseId).getId(), material, length);
+    }
+
+    // ---------------------------------------------------------------- F03 question answering
+
+    public Answer askQuestion(String courseId, String question) {
+        return qaService.answer(materialService.getCourse(courseId).getId(), question);
     }
 
     public String getLlmName() {
