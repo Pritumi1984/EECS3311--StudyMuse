@@ -18,6 +18,7 @@ public class Course {
     private final List<ReviewRecord> reviews = new ArrayList<>();
     private final List<Quiz> quizzes = new ArrayList<>();
     private final List<QuizResult> quizResults = new ArrayList<>();
+    private final List<WeakTopic> weakTopics = new ArrayList<>();
 
     public Course(String id, String name) {
         this.id = id;
@@ -37,6 +38,13 @@ public class Course {
     public void addQuiz(Quiz q) { quizzes.add(q); }
     public List<QuizResult> getQuizResults() { return List.copyOf(quizResults); }
     public void addQuizResult(QuizResult r) { quizResults.add(r); }
+    public List<WeakTopic> getWeakTopics() { return List.copyOf(weakTopics); }
+
+    /** Latest weak-topic analysis, kept for the study planner (F10). */
+    public void setWeakTopics(List<WeakTopic> latest) {
+        weakTopics.clear();
+        weakTopics.addAll(latest);
+    }
 
     public Optional<Quiz> findQuiz(String quizId) {
         return quizzes.stream().filter(q -> q.getId().equalsIgnoreCase(quizId)).findFirst();
@@ -127,6 +135,11 @@ public class Course {
             qr.add(r.toMap());
         }
         m.put("quizResults", qr);
+        List<Object> wt = new ArrayList<>();
+        for (WeakTopic w : weakTopics) {
+            wt.add(w.toMap());
+        }
+        m.put("weakTopics", wt);
         return m;
     }
 
@@ -149,6 +162,9 @@ public class Course {
         }
         for (Object o : Json.list(m, "quizResults")) {
             c.quizResults.add(QuizResult.fromMap(Json.obj(o)));
+        }
+        for (Object o : Json.list(m, "weakTopics")) {
+            c.weakTopics.add(WeakTopic.fromMap(Json.obj(o)));
         }
         return c;
     }

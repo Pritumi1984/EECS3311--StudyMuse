@@ -12,6 +12,8 @@ import com.studymuse.domain.QuizRequest;
 import com.studymuse.domain.QuizResult;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
+import com.studymuse.domain.WeakTopicReport;
+import com.studymuse.services.AnalyticsService;
 import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
@@ -38,16 +40,18 @@ public class StudyAgentController {
     private final QAService qaService;
     private final FlashcardService flashcardService;
     private final QuizService quizService;
+    private final AnalyticsService analyticsService;
     private final String llmName;
 
     public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
                                 QAService qaService, FlashcardService flashcardService, QuizService quizService,
-                                String llmName) {
+                                AnalyticsService analyticsService, String llmName) {
         this.materialService = materialService;
         this.analysisService = analysisService;
         this.qaService = qaService;
         this.flashcardService = flashcardService;
         this.quizService = quizService;
+        this.analyticsService = analyticsService;
         this.llmName = llmName;
     }
 
@@ -145,6 +149,12 @@ public class StudyAgentController {
 
     public List<QuizResult> listQuizResults(String courseId) {
         return materialService.getCourse(courseId).getQuizResults();
+    }
+
+    // ---------------------------------------------------------------- F09 weak-topic identification
+
+    public WeakTopicReport getWeakTopics(String courseId) {
+        return analyticsService.findWeakTopics(materialService.getCourse(courseId));
     }
 
     public String getLlmName() {

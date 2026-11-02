@@ -158,6 +158,11 @@ public class StudyCLI implements StudyView {
                         showResult(sb.toString());
                     }
                 }
+                case "weak-topics" -> {
+                    need(t, 2, "weak-topics <courseId>");
+                    showResult("Analysing your quiz and flashcard history ...");
+                    showResult(controller.getWeakTopics(t.get(1)).toText());
+                }
                 case "decks" -> {
                     need(t, 2, "decks <courseId>");
                     List<Deck> decks = controller.listDecks(t.get(1));
@@ -437,6 +442,7 @@ public class StudyCLI implements StudyView {
                   quiz generate <courseId> --topics "A,B" [--count 3-30] [--difficulty easy|medium|hard] [--types mc,sa]   (F07)
                   quizzes <courseId>                   list saved quizzes
                   quiz take <courseId> <quizId>        answer a quiz and get graded feedback (F08)
+                  weak-topics <courseId>               find weak topics and why you miss them (F09)
                   help | exit""";
     }
 

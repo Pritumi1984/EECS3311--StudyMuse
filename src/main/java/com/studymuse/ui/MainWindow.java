@@ -74,7 +74,7 @@ public final class MainWindow implements StudyView, WorkspaceContext {
     public void show() {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setContentPane(root);
-        frame.setSize(1000, 650);
+        frame.setSize(1180, 720);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
@@ -170,7 +170,8 @@ public final class MainWindow implements StudyView, WorkspaceContext {
         tabs.addTab("Flashcards (F05)", new FlashcardPanel(controller, this));
         tabs.addTab("Review (F06)", new ReviewPanel(controller, this));
         QuizPanel quizPanel = new QuizPanel(controller, this);
-        tabs.addTab("Quiz (F07)", quizPanel);
+        tabs.addTab("Quiz (F07-F08)", quizPanel);
+        tabs.addTab("Weak Topics (F09)", new WeakTopicsPanel(controller, this));
         courseList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 quizPanel.reloadQuizzes(null);

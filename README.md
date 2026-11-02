@@ -48,6 +48,12 @@ studymuse> upload eecs3311 sample-data/uml-notes.md
 studymuse> summarize eecs3311 uml-notes.md short
 studymuse> ask eecs3311 "What problem does the Decorator pattern solve?"
 studymuse> concepts eecs3311 design-patterns-notes.txt
+studymuse> flashcards generate eecs3311 design-patterns-notes.txt 10
+studymuse> flashcards review eecs3311
+studymuse> quiz generate eecs3311 --topics "Observer,Decorator" --count 5 --difficulty medium --types mc,sa
+studymuse> quizzes eecs3311
+studymuse> quiz take eecs3311 <quizId>
+studymuse> weak-topics eecs3311
 studymuse> help
 ```
 
@@ -61,7 +67,12 @@ A single command also works without the interactive prompt: `run.bat cli ask eec
 | F02 Material summarization | Implemented | Summarize tab | `summarize` |
 | F03 Question answering over materials (with cited sources) | Implemented | Ask tab | `ask` |
 | F04 Key concept extraction | Implemented | Concepts tab | `concepts` |
-| F05–F12 | Planned for the next commits | | |
+| F05 Flashcard generation (preview, edit, save) | Implemented | Flashcards tab | `flashcards generate`, `decks` |
+| F06 Flashcard review with spaced repetition (SM-2) | Implemented | Review tab | `flashcards review` |
+| F07 Quiz generation (multiple choice + short answer) | Implemented | Quiz tab | `quiz generate`, `quizzes` |
+| F08 Quiz grading and feedback | Implemented | Quiz tab → Submit Answers | `quiz take` |
+| F09 Weak-topic identification | Implemented | Weak Topics tab | `weak-topics` |
+| F10–F12 | Planned for the next commits | | |
 
 ### Source layout
 
@@ -70,12 +81,15 @@ src/main/java/com/studymuse/
   Main.java        wires the layers, starts GUI or CLI
   ui/              MainWindow (Swing GUI), StudyCLI, StudyView
   controller/      StudyAgentController (Facade)
-  services/        MaterialService, MaterialAnalysisService, QAService
+  services/        MaterialService, MaterialAnalysisService, QAService, FlashcardService,
+                   SpacedRepetitionScheduler, QuizService, AnalyticsService
+  grading/         GradingStrategy (Strategy), MultipleChoiceGrader, ShortAnswerGrader
   agent/           PromptBuilder (Builder), ResponseParser, StructuredLLMCall
   llm/             LLMProvider (Strategy), Gemini/Claude adapters, Mock, Retry/Logging decorators, factory
   documents/       DocumentReaderFactory (Factory Method), TextChunker, SearchIndex
   persistence/     CourseRepository, JsonCourseRepository
-  domain/          Course, Material, Chunk, Summary, Concept, Answer
+  domain/          Course, Material, Chunk, Summary, Concept, Answer, Deck, Flashcard, Quiz,
+                   Question, QuizResult, GradeResult, WeakTopic, ...
   config/          AppConfig (Singleton)
 sample-data/       safe example study notes for trying the app
 ```

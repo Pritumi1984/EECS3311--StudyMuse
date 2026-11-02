@@ -15,6 +15,7 @@ import com.studymuse.llm.LLMProvider;
 import com.studymuse.llm.LLMProviderFactory;
 import com.studymuse.persistence.CourseRepository;
 import com.studymuse.persistence.JsonCourseRepository;
+import com.studymuse.services.AnalyticsService;
 import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
@@ -53,7 +54,8 @@ public final class Main {
         QuizService quizzes = new QuizService(ai, index, repository, Map.of(
                 QuestionType.MULTIPLE_CHOICE, new MultipleChoiceGrader(),
                 QuestionType.SHORT_ANSWER, new ShortAnswerGrader(ai)));
-        return new StudyAgentController(materials, analysis, qa, flashcards, quizzes, llm.getProviderName());
+        AnalyticsService analytics = new AnalyticsService(ai, repository);
+        return new StudyAgentController(materials, analysis, qa, flashcards, quizzes, analytics, llm.getProviderName());
     }
 
     public static void main(String[] args) {

@@ -64,6 +64,14 @@ public class MockLLMProvider implements LLMProvider {
             double ratio = model.isEmpty() ? 0 : (double) overlap / model.size();
             out.put("score", ratio >= 0.5 ? 1 : ratio >= 0.2 ? 0.5 : 0);
             out.put("reason", "[mock] " + Math.round(ratio * 100) + "% of the model answer's key words were used.");
+        } else if (prompt.contains("\"diagnoses\"")) {
+            List<Object> ds = new ArrayList<>();
+            Matcher tm = Pattern.compile("TOPIC: (.+?) \\(").matcher(prompt);
+            while (tm.find()) {
+                ds.add(Map.of("topic", tm.group(1), "diagnosis", "[mock] Your answers on " + tm.group(1)
+                        + " mix it up with related ideas; re-read its definition and redo its flashcards."));
+            }
+            out.put("diagnoses", ds);
         } else if (prompt.contains("\"explanations\"")) {
             List<Object> ex = new ArrayList<>();
             Matcher qm = Pattern.compile("QUESTION ID: (\\S+)\\s+QUESTION: .*\\s+CORRECT ANSWER: (.*)").matcher(prompt);
