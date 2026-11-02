@@ -5,8 +5,13 @@ import com.studymuse.domain.Answer;
 import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
+import com.studymuse.domain.Difficulty;
 import com.studymuse.domain.Flashcard;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.Question;
+import com.studymuse.domain.QuestionType;
+import com.studymuse.domain.Quiz;
+import com.studymuse.domain.QuizRequest;
 import com.studymuse.domain.Rating;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
@@ -21,6 +26,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -125,6 +131,27 @@ public class StudyCLI implements StudyView {
                                 + " | flashcards review <courseId>");
                     }
                 }
+                case "quiz" -> {
+                    need(t, 3, "quiz generate <courseId> --topics \"A,B\" [--count 10] [--difficulty medium] [--types mc,sa]");
+                    if (t.get(1).equalsIgnoreCase("generate")) {
+                        generateQuiz(t);
+                    } else {
+                        throw new StudyException("Usage: quiz generate <courseId> --topics \"A,B\" ...");
+                    }
+                }
+                case "quizzes" -> {
+                    need(t, 2, "quizzes <courseId>");
+                    List<Quiz> quizzes = controller.listQuizzes(t.get(1));
+                    if (quizzes.isEmpty()) {
+                        showResult("No quizzes yet. Try: quiz generate " + t.get(1) + " --topics \"Observer\" --count 5");
+                    } else {
+                        StringBuilder sb = new StringBuilder("Quizzes:\n");
+                        for (Quiz q : quizzes) {
+                            sb.append("  ").append(q.getId()).append("  ").append(q).append('\n');
+                        }
+                        showResult(sb.toString());
+                    }
+                }
                 case "decks" -> {
                     need(t, 2, "decks <courseId>");
                     List<Deck> decks = controller.listDecks(t.get(1));
@@ -179,6 +206,51 @@ public class StudyCLI implements StudyView {
         }
         Deck saved = controller.saveDeck(courseId, deck);
         showResult("Saved deck " + saved + " (id " + saved.getId() + ").");
+    }
+
+    /** F07: parse options, generate and save a quiz, then preview its questions (answers hidden). */
+    private void generateQuiz(List<String> t) {
+        String courseId = t.get(2);
+        String topics = option(t, "--topics", null);
+        if (topics == null) {
+            throw new StudyException("Give the quiz topics, e.g. --topics \"UML,Observer\"");
+        }
+        int count = parseInt(option(t, "--count", "10"), "count");
+        Difficulty difficulty = Difficulty.parse(option(t, "--difficulty", "medium"));
+        EnumSet<QuestionType> types = EnumSet.noneOf(QuestionType.class);
+        for (String ty : option(t, "--types", "mc,sa").split(",")) {
+            types.add(QuestionType.parse(ty));
+        }
+        showResult("Generating a " + difficulty.name().toLowerCase() + " quiz with " + controller.getLlmName() + " ...");
+        Quiz quiz = controller.generateQuiz(courseId,
+                new QuizRequest(Arrays.asList(topics.split(",")), count, types, difficulty));
+        StringBuilder sb = new StringBuilder("Created " + quiz + "  (id " + quiz.getId() + ")\n");
+        int i = 1;
+        for (Question q : quiz.getQuestions()) {
+            sb.append(String.format("%n%2d. [%s, %s] %s%n", i++, q.getTopic(),
+                    q.getType() == QuestionType.MULTIPLE_CHOICE ? "multiple choice" : "short answer", q.getText()));
+            char letter = 'A';
+            for (String o : q.getOptions()) {
+                sb.append("      ").append(letter++).append(") ").append(o).append('\n');
+            }
+        }
+        if (quiz.getQuestions().size() < count) {
+            sb.append("\nNote: only ").append(quiz.getQuestions().size()).append(" valid questions were created (asked for ")
+                    .append(count).append(").");
+        }
+        showResult(sb.toString());
+    }
+
+    /** Value after a --flag, or the default when the flag is absent. */
+    private static String option(List<String> t, String flag, String def) {
+        int i = t.indexOf(flag);
+        if (i < 0) {
+            return def;
+        }
+        if (i + 1 >= t.size()) {
+            throw new StudyException("Missing value after " + flag + ".");
+        }
+        return t.get(i + 1);
     }
 
     /** F06: show each due card, flip on Enter, rate 1-4; ratings are saved one by one. */
@@ -328,6 +400,8 @@ public class StudyCLI implements StudyView {
                   flashcards generate <courseId> <material|concept> [count]   AI flashcards, 5-50 (F05)
                   decks <courseId>                     list saved flashcard decks
                   flashcards review <courseId>         review due cards with spaced repetition (F06)
+                  quiz generate <courseId> --topics "A,B" [--count 3-30] [--difficulty easy|medium|hard] [--types mc,sa]   (F07)
+                  quizzes <courseId>                   list saved quizzes
                   help | exit""";
     }
 

@@ -169,6 +169,13 @@ public final class MainWindow implements StudyView, WorkspaceContext {
         tabs.addTab("Concepts (F04)", conPanel);
         tabs.addTab("Flashcards (F05)", new FlashcardPanel(controller, this));
         tabs.addTab("Review (F06)", new ReviewPanel(controller, this));
+        QuizPanel quizPanel = new QuizPanel(controller, this);
+        tabs.addTab("Quiz (F07)", quizPanel);
+        courseList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                quizPanel.reloadQuizzes(null);
+            }
+        });
         return tabs;
     }
 

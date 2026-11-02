@@ -55,6 +55,8 @@ public class MockLLMProvider implements LLMProvider {
             String firstId = chunks.isEmpty() ? null : chunks.keySet().iterator().next();
             out.put("answer", "[mock] " + (sentences.isEmpty() ? "No relevant text." : sentences.get(0)));
             out.put("citations", firstId == null ? List.of() : List.of(firstId));
+        } else if (prompt.contains("\"questions\"")) {
+            out.put("questions", mockQuestions(prompt, sentences));
         } else if (prompt.contains("\"cards\"")) {
             int n = requestedCount(prompt, 5);
             List<Object> cards = new ArrayList<>();
@@ -82,6 +84,57 @@ public class MockLLMProvider implements LLMProvider {
             return "[mock] This is the offline mock provider. Set LLM_PROVIDER and LLM_API_KEY in .env for real answers.";
         }
         return Json.compact(out);
+    }
+
+    private static List<Object> mockQuestions(String prompt, List<String> sentences) {
+        int n = requestedCount(prompt, 5);
+        String[] topics = lineAfter(prompt, "TOPICS:", "General").split("\\s*\\|\\s*");
+        String typesLine = lineAfter(prompt, "TYPES:", "MULTIPLE_CHOICE");
+        List<String> types = new ArrayList<>();
+        if (typesLine.contains("MULTIPLE_CHOICE")) {
+            types.add("MULTIPLE_CHOICE");
+        }
+        if (typesLine.contains("SHORT_ANSWER")) {
+            types.add("SHORT_ANSWER");
+        }
+        List<Object> qs = new ArrayList<>();
+        for (int i = 0; i < n && !sentences.isEmpty(); i++) {
+            String topic = topics[i % topics.length];
+            String type = types.get(i % types.size());
+            String correct = shorten(sentences.get(i % sentences.size()));
+            Map<String, Object> q = new LinkedHashMap<>();
+            if (type.equals("MULTIPLE_CHOICE")) {
+                List<String> options = new ArrayList<>();
+                options.add(correct);
+                for (int k = 1; options.size() < 4 && k < sentences.size(); k++) {
+                    String d = shorten(sentences.get((i + k * 3) % sentences.size()));
+                    if (!options.contains(d)) {
+                        options.add(d);
+                    }
+                }
+                java.util.Collections.rotate(options, i % 4);
+                q.put("text", "[mock] Which statement about " + topic + " appears in your notes? (" + (i + 1) + ")");
+                q.put("options", options);
+            } else {
+                q.put("text", "[mock] In your own words: " + String.join(" ", java.util.Arrays.copyOfRange(
+                        correct.split("\\s+"), 0, Math.min(6, correct.split("\\s+").length))) + " ...? (" + (i + 1) + ")");
+                q.put("options", List.of());
+            }
+            q.put("type", type);
+            q.put("correctAnswer", correct);
+            q.put("topic", topic);
+            qs.add(q);
+        }
+        return qs;
+    }
+
+    private static String lineAfter(String prompt, String label, String def) {
+        Matcher m = Pattern.compile(Pattern.quote(label) + "\\s*(.+)").matcher(prompt);
+        return m.find() ? m.group(1).trim() : def;
+    }
+
+    private static String shorten(String s) {
+        return s.length() > 90 ? s.substring(0, 87) + "..." : s;
     }
 
     /** Reads N from "exactly N" in the request, so mock output respects the requested size. */

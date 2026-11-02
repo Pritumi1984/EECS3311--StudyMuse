@@ -7,12 +7,16 @@ import com.studymuse.domain.Deck;
 import com.studymuse.domain.Flashcard;
 import com.studymuse.domain.Rating;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.Quiz;
+import com.studymuse.domain.QuizRequest;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
 import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
+import com.studymuse.services.QuizService;
+import com.studymuse.services.StudyException;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -31,14 +35,17 @@ public class StudyAgentController {
     private final MaterialAnalysisService analysisService;
     private final QAService qaService;
     private final FlashcardService flashcardService;
+    private final QuizService quizService;
     private final String llmName;
 
     public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
-                                QAService qaService, FlashcardService flashcardService, String llmName) {
+                                QAService qaService, FlashcardService flashcardService, QuizService quizService,
+                                String llmName) {
         this.materialService = materialService;
         this.analysisService = analysisService;
         this.qaService = qaService;
         this.flashcardService = flashcardService;
+        this.quizService = quizService;
         this.llmName = llmName;
     }
 
@@ -108,6 +115,22 @@ public class StudyAgentController {
 
     public Flashcard reviewCard(String courseId, String cardId, Rating rating) {
         return flashcardService.review(materialService.getCourse(courseId), cardId, rating, LocalDate.now());
+    }
+
+    // ---------------------------------------------------------------- F07 quiz generation
+
+    public Quiz generateQuiz(String courseId, QuizRequest request) {
+        return quizService.generate(materialService.getCourse(courseId), request);
+    }
+
+    public List<Quiz> listQuizzes(String courseId) {
+        return materialService.getCourse(courseId).getQuizzes();
+    }
+
+    public Quiz getQuiz(String courseId, String quizId) {
+        Course course = materialService.getCourse(courseId);
+        return course.findQuiz(quizId)
+                .orElseThrow(() -> new StudyException("No quiz '" + quizId + "' in " + course.getName() + ". Use 'quizzes'."));
     }
 
     public String getLlmName() {
