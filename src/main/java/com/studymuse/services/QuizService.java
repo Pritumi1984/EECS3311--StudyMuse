@@ -5,16 +5,20 @@ import com.studymuse.agent.StructuredLLMCall;
 import com.studymuse.documents.SearchIndex;
 import com.studymuse.domain.Chunk;
 import com.studymuse.domain.Course;
+import com.studymuse.domain.GradeResult;
 import com.studymuse.domain.Question;
 import com.studymuse.domain.QuestionType;
 import com.studymuse.domain.Quiz;
 import com.studymuse.domain.QuizRequest;
+import com.studymuse.domain.QuizResult;
+import com.studymuse.grading.GradingStrategy;
 import com.studymuse.persistence.CourseRepository;
 import com.studymuse.util.Json;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -25,7 +29,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * F07 quiz generation (AI). Retrieves chunks for the chosen topics, asks the LLM for questions in a
+ * F07 quiz generation (AI) and F08 grading (hybrid).
+ * F07: Retrieves chunks for the chosen topics, asks the LLM for questions in a
  * strict JSON format, validates every question, regenerates the invalid/missing ones once, and saves
  * the quiz on the course.
  */
@@ -40,11 +45,84 @@ public class QuizService {
     protected final StructuredLLMCall ai;
     protected final SearchIndex index;
     protected final CourseRepository repository;
+    private final Map<QuestionType, GradingStrategy> graders;
 
-    public QuizService(StructuredLLMCall ai, SearchIndex index, CourseRepository repository) {
+    /** graders: the STRATEGY for each question type (context = this service). */
+    public QuizService(StructuredLLMCall ai, SearchIndex index, CourseRepository repository,
+                       Map<QuestionType, GradingStrategy> graders) {
         this.ai = ai;
         this.index = index;
         this.repository = repository;
+        this.graders = new EnumMap<>(graders);
+    }
+
+    // ------------------------------------------------------------------ F08 grading
+
+    /**
+     * Grades every question with the strategy registered for its type (blank answers score 0 with no
+     * AI call), asks the LLM to explain each mistake from the course material, and saves the attempt.
+     */
+    public QuizResult grade(Course course, Quiz quiz, Map<String, String> answers) {
+        List<GradeResult> grades = new ArrayList<>();
+        for (Question q : quiz.getQuestions()) {
+            String answer = answers.getOrDefault(q.getId(), "");
+            answer = answer == null ? "" : answer.trim();
+            if (answer.isEmpty()) {
+                grades.add(new GradeResult(q.getId(), q.getTopic(), q.getText(), "", q.getCorrectAnswer(), 0,
+                        "No answer given.", false));
+                continue;
+            }
+            GradingStrategy grader = graders.get(q.getType());
+            if (grader == null) {
+                throw new StudyException("No grader is registered for " + q.getType() + " questions.");
+            }
+            grades.add(grader.grade(q, answer));
+        }
+        explainMistakes(course, grades);
+        QuizResult result = new QuizResult("result-" + UUID.randomUUID().toString().substring(0, 6), quiz.getId(),
+                quiz.getTitle(), LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), grades);
+        repository.saveQuizResult(course.getId(), result);
+        return result;
+    }
+
+    /** One LLM call explains all wrong/partial answers, grounded in retrieved chunks. Failure keeps the basic feedback. */
+    private void explainMistakes(Course course, List<GradeResult> grades) {
+        List<GradeResult> wrong = grades.stream().filter(g -> !g.isPending() && g.getScore() < 1.0).toList();
+        if (wrong.isEmpty()) {
+            return;
+        }
+        Set<Chunk> context = new LinkedHashSet<>();
+        StringBuilder req = new StringBuilder("Explain briefly (2-3 sentences each) why each answer below is wrong or "
+                + "incomplete and what the correct idea is, using the course material.\n");
+        for (GradeResult g : wrong) {
+            context.addAll(index.search(course.getId(), g.getQuestionText() + " " + g.getCorrectAnswer(), 2));
+            req.append("\nQUESTION ID: ").append(g.getQuestionId())
+                    .append("\nQUESTION: ").append(g.getQuestionText())
+                    .append("\nCORRECT ANSWER: ").append(g.getCorrectAnswer())
+                    .append("\nSTUDENT ANSWER: ").append(g.getStudentAnswer().isEmpty() ? "(blank)" : g.getStudentAnswer())
+                    .append('\n');
+        }
+        try {
+            Map<String, Object> json = ai.ask(new PromptBuilder()
+                    .withSystemInstructions("You are StudyMuse, a patient tutor.")
+                    .withContext(new ArrayList<>(context).subList(0, Math.min(context.size(), 8)))
+                    .withOutputFormat("{\"explanations\": [{\"questionId\": \"...\", \"explanation\": \"...\"}]}")
+                    .withUserRequest(req.toString())
+                    .build());
+            for (Object o : Json.list(json, "explanations")) {
+                Map<String, Object> e = Json.obj(o);
+                String id = Json.str(e, "questionId");
+                String text = Json.str(e, "explanation");
+                for (GradeResult g : wrong) {
+                    if (g.getQuestionId().equals(id) && text != null && !text.isBlank()) {
+                        String prefix = g.getFeedback() == null || g.getFeedback().isBlank() ? "" : g.getFeedback() + " ";
+                        g.setFeedback(prefix + text.trim());
+                    }
+                }
+            }
+        } catch (StudyException e) {
+            // explanations are optional; the grades themselves are already complete
+        }
     }
 
     public Quiz generate(Course course, QuizRequest request) {

@@ -3,6 +3,7 @@ package com.studymuse.persistence;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.QuizResult;
 import com.studymuse.services.StudyException;
 import com.studymuse.util.Json;
 
@@ -79,6 +80,18 @@ public class JsonCourseRepository implements CourseRepository {
         Course course = findCourse(courseId).orElseThrow(() -> new StudyException("No course with id '" + courseId + "'."));
         course.addDeck(deck);
         saveCourse(course);
+    }
+
+    @Override
+    public synchronized void saveQuizResult(String courseId, QuizResult result) {
+        Course course = findCourse(courseId).orElseThrow(() -> new StudyException("No course with id '" + courseId + "'."));
+        course.addQuizResult(result);
+        saveCourse(course);
+    }
+
+    @Override
+    public synchronized List<QuizResult> findQuizResults(String courseId) {
+        return findCourse(courseId).map(Course::getQuizResults).orElse(List.of());
     }
 
     private Path fileFor(String id) {

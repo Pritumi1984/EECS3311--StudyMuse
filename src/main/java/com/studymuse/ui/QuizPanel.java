@@ -7,6 +7,7 @@ import com.studymuse.domain.Question;
 import com.studymuse.domain.QuestionType;
 import com.studymuse.domain.Quiz;
 import com.studymuse.domain.QuizRequest;
+import com.studymuse.domain.QuizResult;
 import com.studymuse.services.QuizService;
 import com.studymuse.services.StudyException;
 
@@ -24,6 +25,7 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import java.awt.BorderLayout;
@@ -38,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * F07 "New Quiz" form plus the quiz itself: multiple-choice questions as radio buttons and short-answer
+ * F07 "New Quiz" form plus the quiz itself (F08: Submit grades it): multiple-choice questions as radio buttons and short-answer
  * questions as text fields. Previously generated quizzes can be reopened from the drop-down.
  */
 class QuizPanel extends JPanel {
@@ -55,7 +57,7 @@ class QuizPanel extends JPanel {
     private final JCheckBox mcBox = new JCheckBox("Multiple choice", true);
     private final JCheckBox saBox = new JCheckBox("Short answer", true);
     private final JComboBox<Quiz> quizBox = new JComboBox<>();
-    protected final JPanel questionsPanel = new JPanel();
+    protected final JPanel questionsPanel = new WidthTrackingPanel();
     protected final JLabel info = new JLabel("Enter topics from your notes (comma-separated) and click Generate Quiz.");
 
     /** Answer inputs of the quiz on screen, by question id (radio group or text field). */
@@ -115,11 +117,97 @@ class QuizPanel extends JPanel {
         add(buildBottom(), BorderLayout.SOUTH);
     }
 
-    /** Bottom bar; grading (F08) adds its Submit button here. */
+    private final JButton submitButton = new JButton("Submit Answers");
+
+    /** Bottom bar with the F08 Submit button. */
     protected JComponent buildBottom() {
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        submitButton.setEnabled(false);
+        submitButton.addActionListener(e -> onSubmitClicked());
+        bottom.add(submitButton);
         bottom.add(info);
         return bottom;
+    }
+
+    /** F08: collects the answers from the form and grades them in the background. */
+    void onSubmitClicked() {
+        Course course = ctx.selectedCourse();
+        Quiz quiz = currentQuiz;
+        if (course == null || quiz == null) {
+            return;
+        }
+        Map<String, String> answers = new LinkedHashMap<>();
+        int blank = 0;
+        for (Map.Entry<String, Object> e : answerInputs.entrySet()) {
+            String a = "";
+            if (e.getValue() instanceof ButtonGroup g && g.getSelection() != null) {
+                a = g.getSelection().getActionCommand();
+            } else if (e.getValue() instanceof JTextField f) {
+                a = f.getText().trim();
+            }
+            if (a.isEmpty()) {
+                blank++;
+            }
+            answers.put(e.getKey(), a);
+        }
+        if (blank > 0 && JOptionPane.showConfirmDialog(ctx.window(), blank + " question(s) are unanswered and will score 0. Submit anyway?",
+                "Submit quiz", JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION) {
+            return;
+        }
+        submitButton.setEnabled(false);
+        info.setText("Grading ...");
+        ctx.runInBackground("Grading with " + controller.getLlmName() + " ...",
+                () -> controller.submitQuiz(course.getId(), quiz.getId(), answers),
+                (QuizResult r) -> showResult(r),
+                () -> {
+                    submitButton.setEnabled(true);
+                    info.setText("Grading failed - your answers are still on screen.");
+                });
+    }
+
+    private void showResult(QuizResult r) {
+        questionsPanel.removeAll();
+        JTextArea area = new JTextArea(r.toText());
+        area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 13));
+        area.setAlignmentX(Component.LEFT_ALIGNMENT);
+        questionsPanel.add(area);
+        questionsPanel.revalidate();
+        questionsPanel.repaint();
+        info.setText(String.format("Score: %.0f%%. Pick the quiz again from the list to retake it.", r.getScorePercent()));
+        ctx.setStatus(String.format("Quiz graded: %.0f%%", r.getScorePercent()));
+    }
+
+    /** A panel that always matches the scroll pane's width, so long questions and feedback wrap. */
+    private static final class WidthTrackingPanel extends JPanel implements javax.swing.Scrollable {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public java.awt.Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(java.awt.Rectangle r, int orientation, int direction) {
+            return 16;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(java.awt.Rectangle r, int orientation, int direction) {
+            return r.height - 16;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 
     void setTopics(String topics) {
@@ -225,6 +313,7 @@ class QuizPanel extends JPanel {
         }
         questionsPanel.revalidate();
         questionsPanel.repaint();
-        info.setText(quiz.getQuestions().size() + " questions. Answer them below.");
+        info.setText(quiz.getQuestions().size() + " questions. Answer them, then Submit Answers.");
+        submitButton.setEnabled(true);
     }
 }

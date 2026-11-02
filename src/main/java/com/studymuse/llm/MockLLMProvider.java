@@ -5,6 +5,8 @@ import com.studymuse.util.Json;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,20 @@ public class MockLLMProvider implements LLMProvider {
             String firstId = chunks.isEmpty() ? null : chunks.keySet().iterator().next();
             out.put("answer", "[mock] " + (sentences.isEmpty() ? "No relevant text." : sentences.get(0)));
             out.put("citations", firstId == null ? List.of() : List.of(firstId));
+        } else if (prompt.contains("\"score\"")) {
+            Set<String> model = words(lineAfter(prompt, "MODEL ANSWER:", ""));
+            Set<String> student = words(lineAfter(prompt, "STUDENT ANSWER:", ""));
+            long overlap = student.stream().filter(model::contains).count();
+            double ratio = model.isEmpty() ? 0 : (double) overlap / model.size();
+            out.put("score", ratio >= 0.5 ? 1 : ratio >= 0.2 ? 0.5 : 0);
+            out.put("reason", "[mock] " + Math.round(ratio * 100) + "% of the model answer's key words were used.");
+        } else if (prompt.contains("\"explanations\"")) {
+            List<Object> ex = new ArrayList<>();
+            Matcher qm = Pattern.compile("QUESTION ID: (\\S+)\\s+QUESTION: .*\\s+CORRECT ANSWER: (.*)").matcher(prompt);
+            while (qm.find()) {
+                ex.add(Map.of("questionId", qm.group(1), "explanation", "[mock] The key idea is: " + qm.group(2).trim()));
+            }
+            out.put("explanations", ex);
         } else if (prompt.contains("\"questions\"")) {
             out.put("questions", mockQuestions(prompt, sentences));
         } else if (prompt.contains("\"cards\"")) {
@@ -126,6 +142,16 @@ public class MockLLMProvider implements LLMProvider {
             qs.add(q);
         }
         return qs;
+    }
+
+    private static Set<String> words(String text) {
+        Set<String> w = new HashSet<>();
+        for (String t : text.toLowerCase().split("[^a-z0-9]+")) {
+            if (t.length() > 3) {
+                w.add(t);
+            }
+        }
+        return w;
     }
 
     private static String lineAfter(String prompt, String label, String def) {

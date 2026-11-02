@@ -3,6 +3,7 @@ package com.studymuse.persistence;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.QuizResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,4 +20,8 @@ public interface CourseRepository {
     void saveMaterial(String courseId, Material material);
 
     void saveDeck(String courseId, Deck deck);
+
+    void saveQuizResult(String courseId, QuizResult result);
+
+    List<QuizResult> findQuizResults(String courseId);
 }

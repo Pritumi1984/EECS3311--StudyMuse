@@ -9,6 +9,7 @@ import com.studymuse.domain.Rating;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.Quiz;
 import com.studymuse.domain.QuizRequest;
+import com.studymuse.domain.QuizResult;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
 import com.studymuse.services.FlashcardService;
@@ -21,6 +22,7 @@ import com.studymuse.services.StudyException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -131,6 +133,18 @@ public class StudyAgentController {
         Course course = materialService.getCourse(courseId);
         return course.findQuiz(quizId)
                 .orElseThrow(() -> new StudyException("No quiz '" + quizId + "' in " + course.getName() + ". Use 'quizzes'."));
+    }
+
+    // ---------------------------------------------------------------- F08 grading and feedback
+
+    /** answers: question id -> the student's answer (option text, letter A-D, or free text). */
+    public QuizResult submitQuiz(String courseId, String quizId, Map<String, String> answers) {
+        Course course = materialService.getCourse(courseId);
+        return quizService.grade(course, getQuiz(courseId, quizId), answers);
+    }
+
+    public List<QuizResult> listQuizResults(String courseId) {
+        return materialService.getCourse(courseId).getQuizResults();
     }
 
     public String getLlmName() {

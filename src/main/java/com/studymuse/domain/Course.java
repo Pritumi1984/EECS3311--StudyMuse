@@ -17,6 +17,7 @@ public class Course {
     private final List<Deck> decks = new ArrayList<>();
     private final List<ReviewRecord> reviews = new ArrayList<>();
     private final List<Quiz> quizzes = new ArrayList<>();
+    private final List<QuizResult> quizResults = new ArrayList<>();
 
     public Course(String id, String name) {
         this.id = id;
@@ -34,6 +35,8 @@ public class Course {
     public void addReview(ReviewRecord r) { reviews.add(r); }
     public List<Quiz> getQuizzes() { return List.copyOf(quizzes); }
     public void addQuiz(Quiz q) { quizzes.add(q); }
+    public List<QuizResult> getQuizResults() { return List.copyOf(quizResults); }
+    public void addQuizResult(QuizResult r) { quizResults.add(r); }
 
     public Optional<Quiz> findQuiz(String quizId) {
         return quizzes.stream().filter(q -> q.getId().equalsIgnoreCase(quizId)).findFirst();
@@ -119,6 +122,11 @@ public class Course {
             qz.add(q.toMap());
         }
         m.put("quizzes", qz);
+        List<Object> qr = new ArrayList<>();
+        for (QuizResult r : quizResults) {
+            qr.add(r.toMap());
+        }
+        m.put("quizResults", qr);
         return m;
     }
 
@@ -138,6 +146,9 @@ public class Course {
         }
         for (Object o : Json.list(m, "quizzes")) {
             c.quizzes.add(Quiz.fromMap(Json.obj(o)));
+        }
+        for (Object o : Json.list(m, "quizResults")) {
+            c.quizResults.add(QuizResult.fromMap(Json.obj(o)));
         }
         return c;
     }

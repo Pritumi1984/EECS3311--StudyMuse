@@ -12,6 +12,7 @@ import com.studymuse.domain.Question;
 import com.studymuse.domain.QuestionType;
 import com.studymuse.domain.Quiz;
 import com.studymuse.domain.QuizRequest;
+import com.studymuse.domain.QuizResult;
 import com.studymuse.domain.Rating;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
@@ -27,6 +28,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -135,6 +138,9 @@ public class StudyCLI implements StudyView {
                     need(t, 3, "quiz generate <courseId> --topics \"A,B\" [--count 10] [--difficulty medium] [--types mc,sa]");
                     if (t.get(1).equalsIgnoreCase("generate")) {
                         generateQuiz(t);
+                    } else if (t.get(1).equalsIgnoreCase("take")) {
+                        need(t, 4, "quiz take <courseId> <quizId>");
+                        takeQuiz(t.get(2), t.get(3));
                     } else {
                         throw new StudyException("Usage: quiz generate <courseId> --topics \"A,B\" ...");
                     }
@@ -239,6 +245,34 @@ public class StudyCLI implements StudyView {
                     .append(count).append(").");
         }
         showResult(sb.toString());
+    }
+
+    /** F08: ask every question, collect answers (A-D or free text, Enter = blank), then grade. */
+    private void takeQuiz(String courseId, String quizId) {
+        Quiz quiz = controller.getQuiz(courseId, quizId);
+        showResult(quiz + "\nMultiple choice: type A-D. Short answer: type your answer. Enter skips a question.");
+        Map<String, String> answers = new LinkedHashMap<>();
+        int i = 1;
+        for (Question q : quiz.getQuestions()) {
+            System.out.printf("%n%d. %s%n", i++, q.getText());
+            char letter = 'A';
+            for (String o : q.getOptions()) {
+                System.out.println("   " + letter++ + ") " + o);
+            }
+            System.out.print("   Your answer: ");
+            String a = readLine();
+            if (a == null) {
+                break;
+            }
+            if (q.getType() == QuestionType.MULTIPLE_CHOICE && !a.isBlank()
+                    && !a.trim().toUpperCase().matches("[A-" + (char) ('A' + q.getOptions().size() - 1) + "][).]?")) {
+                showResult("   (Not a valid letter - counted as your typed answer.)");
+            }
+            answers.put(q.getId(), a);
+        }
+        showResult("\nGrading with " + controller.getLlmName() + " ...");
+        QuizResult result = controller.submitQuiz(courseId, quizId, answers);
+        showResult(result.toText());
     }
 
     /** Value after a --flag, or the default when the flag is absent. */
@@ -402,6 +436,7 @@ public class StudyCLI implements StudyView {
                   flashcards review <courseId>         review due cards with spaced repetition (F06)
                   quiz generate <courseId> --topics "A,B" [--count 3-30] [--difficulty easy|medium|hard] [--types mc,sa]   (F07)
                   quizzes <courseId>                   list saved quizzes
+                  quiz take <courseId> <quizId>        answer a quiz and get graded feedback (F08)
                   help | exit""";
     }
 

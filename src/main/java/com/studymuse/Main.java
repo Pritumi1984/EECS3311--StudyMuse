@@ -7,6 +7,9 @@ import com.studymuse.controller.StudyAgentController;
 import com.studymuse.documents.DocumentReaderFactory;
 import com.studymuse.documents.SearchIndex;
 import com.studymuse.documents.TextChunker;
+import com.studymuse.domain.QuestionType;
+import com.studymuse.grading.MultipleChoiceGrader;
+import com.studymuse.grading.ShortAnswerGrader;
 import com.studymuse.llm.LLMClient;
 import com.studymuse.llm.LLMProvider;
 import com.studymuse.llm.LLMProviderFactory;
@@ -22,6 +25,7 @@ import com.studymuse.ui.MainWindow;
 import com.studymuse.ui.StudyCLI;
 
 import java.util.Arrays;
+import java.util.Map;
 
 /** Entry point: wires the layers together, then starts the CLI ("cli") or the GUI (default). */
 public final class Main {
@@ -46,7 +50,9 @@ public final class Main {
         MaterialAnalysisService analysis = new MaterialAnalysisService(ai, repository);
         QAService qa = new QAService(index, ai);
         FlashcardService flashcards = new FlashcardService(ai, index, repository, new SpacedRepetitionScheduler());
-        QuizService quizzes = new QuizService(ai, index, repository);
+        QuizService quizzes = new QuizService(ai, index, repository, Map.of(
+                QuestionType.MULTIPLE_CHOICE, new MultipleChoiceGrader(),
+                QuestionType.SHORT_ANSWER, new ShortAnswerGrader(ai)));
         return new StudyAgentController(materials, analysis, qa, flashcards, quizzes, llm.getProviderName());
     }
 
