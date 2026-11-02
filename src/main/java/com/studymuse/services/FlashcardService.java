@@ -8,21 +8,27 @@ import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
 import com.studymuse.domain.Flashcard;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.Rating;
+import com.studymuse.domain.ReviewRecord;
 import com.studymuse.persistence.CourseRepository;
 import com.studymuse.util.Json;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * F05 flashcard generation (AI). Cards come back as a preview Deck that the student can edit or
+ * F05 flashcard generation (AI) and F06 spaced-repetition review (deterministic).
+ * F05: Cards come back as a preview Deck that the student can edit or
  * trim before saveDeck() stores it, so a bad AI run never silently enters the course.
  */
 public class FlashcardService {
@@ -34,11 +40,49 @@ public class FlashcardService {
     private final StructuredLLMCall ai;
     private final SearchIndex index;
     private final CourseRepository repository;
+    private final SpacedRepetitionScheduler scheduler;
 
-    public FlashcardService(StructuredLLMCall ai, SearchIndex index, CourseRepository repository) {
+    public FlashcardService(StructuredLLMCall ai, SearchIndex index, CourseRepository repository,
+                            SpacedRepetitionScheduler scheduler) {
         this.ai = ai;
         this.index = index;
         this.repository = repository;
+        this.scheduler = scheduler;
+    }
+
+    // ------------------------------------------------------------------ F06 review
+
+    /** Cards whose next review date is today or earlier, most overdue first. */
+    public List<Flashcard> getDueCards(Course course, LocalDate today) {
+        List<Flashcard> due = new ArrayList<>();
+        for (Deck d : course.getDecks()) {
+            for (Flashcard c : d.getCards()) {
+                if (c.isDue(today)) {
+                    due.add(c);
+                }
+            }
+        }
+        due.sort(Comparator.comparing(Flashcard::getNextReview));
+        return due;
+    }
+
+    /** The earliest upcoming review date, shown when nothing is due today. */
+    public Optional<LocalDate> nextDueDate(Course course) {
+        return course.getDecks().stream().flatMap(d -> d.getCards().stream())
+                .map(Flashcard::getNextReview).min(Comparator.naturalOrder());
+    }
+
+    /**
+     * Records one rating: the scheduler computes the next interval, and the card plus a review record are
+     * saved immediately, so an interrupted session keeps every rating already given.
+     */
+    public Flashcard review(Course course, String cardId, Rating rating, LocalDate today) {
+        Flashcard card = course.findCard(cardId)
+                .orElseThrow(() -> new StudyException("No flashcard with id '" + cardId + "' in " + course.getName() + "."));
+        scheduler.nextReview(card, rating, today);
+        course.addReview(new ReviewRecord(card.getId(), card.getTopic(), rating, today.toString()));
+        repository.saveCourse(course);
+        return card;
     }
 
     /**

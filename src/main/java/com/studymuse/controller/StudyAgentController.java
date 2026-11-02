@@ -4,6 +4,8 @@ import com.studymuse.domain.Answer;
 import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
+import com.studymuse.domain.Flashcard;
+import com.studymuse.domain.Rating;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
@@ -13,7 +15,9 @@ import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
 
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Design pattern: FACADE.
@@ -90,6 +94,20 @@ public class StudyAgentController {
 
     public List<Deck> listDecks(String courseId) {
         return materialService.getCourse(courseId).getDecks();
+    }
+
+    // ---------------------------------------------------------------- F06 spaced-repetition review
+
+    public List<Flashcard> getDueCards(String courseId, LocalDate today) {
+        return flashcardService.getDueCards(materialService.getCourse(courseId), today);
+    }
+
+    public Optional<LocalDate> nextDueDate(String courseId) {
+        return flashcardService.nextDueDate(materialService.getCourse(courseId));
+    }
+
+    public Flashcard reviewCard(String courseId, String cardId, Rating rating) {
+        return flashcardService.review(materialService.getCourse(courseId), cardId, rating, LocalDate.now());
     }
 
     public String getLlmName() {

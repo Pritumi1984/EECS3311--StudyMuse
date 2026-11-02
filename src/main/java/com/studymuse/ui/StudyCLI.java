@@ -7,6 +7,7 @@ import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
 import com.studymuse.domain.Flashcard;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.Rating;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
 import com.studymuse.services.DuplicateMaterialException;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -115,8 +117,12 @@ public class StudyCLI implements StudyView {
                         need(t, 4, "flashcards generate <courseId> <material|concept> [count]");
                         int count = t.size() > 4 ? parseInt(t.get(4), "count") : 10;
                         generateFlashcards(t.get(2), t.get(3), count);
+                    } else if (t.get(1).equalsIgnoreCase("review")) {
+                        need(t, 3, "flashcards review <courseId>");
+                        reviewFlashcards(t.get(2));
                     } else {
-                        throw new StudyException("Usage: flashcards generate <courseId> <material|concept> [count]");
+                        throw new StudyException("Usage: flashcards generate <courseId> <material|concept> [count]"
+                                + " | flashcards review <courseId>");
                     }
                 }
                 case "decks" -> {
@@ -173,6 +179,61 @@ public class StudyCLI implements StudyView {
         }
         Deck saved = controller.saveDeck(courseId, deck);
         showResult("Saved deck " + saved + " (id " + saved.getId() + ").");
+    }
+
+    /** F06: show each due card, flip on Enter, rate 1-4; ratings are saved one by one. */
+    private void reviewFlashcards(String courseId) {
+        List<Flashcard> due = controller.getDueCards(courseId, LocalDate.now());
+        if (due.isEmpty()) {
+            showResult(controller.nextDueDate(courseId)
+                    .map(d -> "No cards are due today. Next review: " + d + ".")
+                    .orElse("No flashcards yet. Create some with: flashcards generate " + courseId + " <material> 10"));
+            return;
+        }
+        showResult(due.size() + " card(s) due. Press Enter to flip, then rate 1=Again 2=Hard 3=Good 4=Easy (q = stop).");
+        int reviewed = 0;
+        int remembered = 0;
+        for (Flashcard card : due) {
+            System.out.print("\n[" + card.getTopic() + "] " + card.getFront() + "\n  (Enter to flip) ");
+            String line = readLine();
+            if (line == null || line.trim().equalsIgnoreCase("q")) {
+                break;
+            }
+            Rating rating = null;
+            while (rating == null) {
+                System.out.print("  Answer: " + card.getBack() + "\n  Rate 1-4: ");
+                line = readLine();
+                if (line == null || line.trim().equalsIgnoreCase("q")) {
+                    break;
+                }
+                try {
+                    rating = Rating.parse(line);
+                } catch (IllegalArgumentException e) {
+                    showError(e.getMessage());
+                }
+            }
+            if (rating == null) {
+                break;
+            }
+            Flashcard updated = controller.reviewCard(courseId, card.getId(), rating);
+            reviewed++;
+            if (rating.getCorrectness() >= 1.0) {
+                remembered++;
+            }
+            showResult("  Next review in " + updated.getIntervalDays() + " day(s), on " + updated.getNextReview() + ".");
+        }
+        if (reviewed > 0) {
+            showResult(String.format("%nSession: %d card(s) reviewed, %d%% remembered (Good/Easy). Ratings are saved.",
+                    reviewed, Math.round(100.0 * remembered / reviewed)));
+        }
+    }
+
+    private String readLine() {
+        try {
+            return in.readLine();
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     private void printDeck(Deck deck) {
@@ -266,6 +327,7 @@ public class StudyCLI implements StudyView {
                   concepts <courseId> <material>       extract key concepts with definitions (F04)
                   flashcards generate <courseId> <material|concept> [count]   AI flashcards, 5-50 (F05)
                   decks <courseId>                     list saved flashcard decks
+                  flashcards review <courseId>         review due cards with spaced repetition (F06)
                   help | exit""";
     }
 

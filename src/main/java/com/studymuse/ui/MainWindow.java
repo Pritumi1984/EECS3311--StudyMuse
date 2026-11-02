@@ -168,6 +168,7 @@ public final class MainWindow implements StudyView, WorkspaceContext {
         conPanel.add(new JScrollPane(conceptArea), BorderLayout.CENTER);
         tabs.addTab("Concepts (F04)", conPanel);
         tabs.addTab("Flashcards (F05)", new FlashcardPanel(controller, this));
+        tabs.addTab("Review (F06)", new ReviewPanel(controller, this));
         return tabs;
     }
 

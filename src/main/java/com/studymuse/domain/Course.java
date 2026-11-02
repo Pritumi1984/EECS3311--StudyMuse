@@ -15,6 +15,7 @@ public class Course {
     private final List<Material> materials = new ArrayList<>();
     private final List<Concept> concepts = new ArrayList<>();
     private final List<Deck> decks = new ArrayList<>();
+    private final List<ReviewRecord> reviews = new ArrayList<>();
 
     public Course(String id, String name) {
         this.id = id;
@@ -28,6 +29,8 @@ public class Course {
     public List<Deck> getDecks() { return List.copyOf(decks); }
 
     public void addDeck(Deck deck) { decks.add(deck); }
+    public List<ReviewRecord> getReviews() { return List.copyOf(reviews); }
+    public void addReview(ReviewRecord r) { reviews.add(r); }
 
     /** Finds a flashcard in any deck of this course. */
     public Optional<Flashcard> findCard(String cardId) {
@@ -99,6 +102,11 @@ public class Course {
             ds.add(d.toMap());
         }
         m.put("decks", ds);
+        List<Object> rs = new ArrayList<>();
+        for (ReviewRecord r : reviews) {
+            rs.add(r.toMap());
+        }
+        m.put("reviews", rs);
         return m;
     }
 
@@ -112,6 +120,9 @@ public class Course {
         }
         for (Object o : Json.list(m, "decks")) {
             c.decks.add(Deck.fromMap(Json.obj(o)));
+        }
+        for (Object o : Json.list(m, "reviews")) {
+            c.reviews.add(ReviewRecord.fromMap(Json.obj(o)));
         }
         return c;
     }

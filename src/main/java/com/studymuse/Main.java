@@ -16,6 +16,7 @@ import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
+import com.studymuse.services.SpacedRepetitionScheduler;
 import com.studymuse.ui.MainWindow;
 import com.studymuse.ui.StudyCLI;
 
@@ -43,7 +44,7 @@ public final class Main {
         StructuredLLMCall ai = new StructuredLLMCall(llm, new ResponseParser());
         MaterialAnalysisService analysis = new MaterialAnalysisService(ai, repository);
         QAService qa = new QAService(index, ai);
-        FlashcardService flashcards = new FlashcardService(ai, index, repository);
+        FlashcardService flashcards = new FlashcardService(ai, index, repository, new SpacedRepetitionScheduler());
         return new StudyAgentController(materials, analysis, qa, flashcards, llm.getProviderName());
     }
 
