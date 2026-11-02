@@ -3,9 +3,11 @@ package com.studymuse.controller;
 import com.studymuse.domain.Answer;
 import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
+import com.studymuse.domain.Deck;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
+import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
@@ -24,13 +26,15 @@ public class StudyAgentController {
     private final MaterialService materialService;
     private final MaterialAnalysisService analysisService;
     private final QAService qaService;
+    private final FlashcardService flashcardService;
     private final String llmName;
 
     public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
-                                QAService qaService, String llmName) {
+                                QAService qaService, FlashcardService flashcardService, String llmName) {
         this.materialService = materialService;
         this.analysisService = analysisService;
         this.qaService = qaService;
+        this.flashcardService = flashcardService;
         this.llmName = llmName;
     }
 
@@ -71,6 +75,21 @@ public class StudyAgentController {
 
     public Answer askQuestion(String courseId, String question) {
         return qaService.answer(materialService.getCourse(courseId).getId(), question);
+    }
+
+    // ---------------------------------------------------------------- F05 flashcard generation
+
+    /** Returns an unsaved preview deck; call saveDeck after the student has reviewed it. */
+    public Deck generateFlashcards(String courseId, String sourceIdOrConcept, int count) {
+        return flashcardService.generate(materialService.getCourse(courseId), sourceIdOrConcept, count);
+    }
+
+    public Deck saveDeck(String courseId, Deck deck) {
+        return flashcardService.saveDeck(materialService.getCourse(courseId).getId(), deck);
+    }
+
+    public List<Deck> listDecks(String courseId) {
+        return materialService.getCourse(courseId).getDecks();
     }
 
     public String getLlmName() {

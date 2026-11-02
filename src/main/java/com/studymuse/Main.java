@@ -12,6 +12,7 @@ import com.studymuse.llm.LLMProvider;
 import com.studymuse.llm.LLMProviderFactory;
 import com.studymuse.persistence.CourseRepository;
 import com.studymuse.persistence.JsonCourseRepository;
+import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
@@ -42,7 +43,8 @@ public final class Main {
         StructuredLLMCall ai = new StructuredLLMCall(llm, new ResponseParser());
         MaterialAnalysisService analysis = new MaterialAnalysisService(ai, repository);
         QAService qa = new QAService(index, ai);
-        return new StudyAgentController(materials, analysis, qa, llm.getProviderName());
+        FlashcardService flashcards = new FlashcardService(ai, index, repository);
+        return new StudyAgentController(materials, analysis, qa, flashcards, llm.getProviderName());
     }
 
     public static void main(String[] args) {

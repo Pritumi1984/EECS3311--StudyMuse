@@ -1,6 +1,7 @@
 package com.studymuse.persistence;
 
 import com.studymuse.domain.Course;
+import com.studymuse.domain.Deck;
 import com.studymuse.domain.Material;
 import com.studymuse.services.StudyException;
 import com.studymuse.util.Json;
@@ -70,6 +71,13 @@ public class JsonCourseRepository implements CourseRepository {
     public synchronized void saveMaterial(String courseId, Material material) {
         Course course = findCourse(courseId).orElseThrow(() -> new StudyException("No course with id '" + courseId + "'."));
         course.putMaterial(material);
+        saveCourse(course);
+    }
+
+    @Override
+    public synchronized void saveDeck(String courseId, Deck deck) {
+        Course course = findCourse(courseId).orElseThrow(() -> new StudyException("No course with id '" + courseId + "'."));
+        course.addDeck(deck);
         saveCourse(course);
     }
 

@@ -1,6 +1,7 @@
 package com.studymuse.persistence;
 
 import com.studymuse.domain.Course;
+import com.studymuse.domain.Deck;
 import com.studymuse.domain.Material;
 
 import java.util.List;
@@ -16,4 +17,6 @@ public interface CourseRepository {
     List<Course> findAllCourses();
 
     void saveMaterial(String courseId, Material material);
+
+    void saveDeck(String courseId, Deck deck);
 }

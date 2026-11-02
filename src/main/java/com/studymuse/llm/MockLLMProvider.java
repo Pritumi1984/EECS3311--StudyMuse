@@ -55,6 +55,17 @@ public class MockLLMProvider implements LLMProvider {
             String firstId = chunks.isEmpty() ? null : chunks.keySet().iterator().next();
             out.put("answer", "[mock] " + (sentences.isEmpty() ? "No relevant text." : sentences.get(0)));
             out.put("citations", firstId == null ? List.of() : List.of(firstId));
+        } else if (prompt.contains("\"cards\"")) {
+            int n = requestedCount(prompt, 5);
+            List<Object> cards = new ArrayList<>();
+            for (int i = 0; i < sentences.size() && cards.size() < n; i++) {
+                String s = sentences.get(i);
+                int is = s.indexOf(" is ");
+                String front = is > 0 && is < 40 ? "What is " + s.substring(0, is).replaceFirst("^(The|A|An) ", "") + "?"
+                        : "Complete: " + String.join(" ", java.util.Arrays.copyOfRange(s.split("\\s+"), 0, 5)) + " ...";
+                cards.add(Map.of("front", "[mock] " + front, "back", s, "topic", is > 0 && is < 40 ? s.substring(0, is) : "General"));
+            }
+            out.put("cards", cards);
         } else if (prompt.contains("\"concepts\"")) {
             List<Object> concepts = new ArrayList<>();
             for (Map.Entry<String, String> e : chunks.entrySet()) {
@@ -71,6 +82,12 @@ public class MockLLMProvider implements LLMProvider {
             return "[mock] This is the offline mock provider. Set LLM_PROVIDER and LLM_API_KEY in .env for real answers.";
         }
         return Json.compact(out);
+    }
+
+    /** Reads N from "exactly N" in the request, so mock output respects the requested size. */
+    private static int requestedCount(String prompt, int def) {
+        Matcher m = Pattern.compile("exactly (\\d+)").matcher(prompt);
+        return m.find() ? Integer.parseInt(m.group(1)) : def;
     }
 
     @Override

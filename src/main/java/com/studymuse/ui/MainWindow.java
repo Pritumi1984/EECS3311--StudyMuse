@@ -45,7 +45,7 @@ import java.util.function.Consumer;
  * Like the CLI it only collects input and shows results; all logic goes through the
  * StudyAgentController facade. Slow AI calls run on a background SwingWorker so the window stays responsive.
  */
-public final class MainWindow implements StudyView {
+public final class MainWindow implements StudyView, WorkspaceContext {
 
     private final StudyAgentController controller;
     private final JFrame frame = new JFrame("StudyMuse - AI Study Agent");
@@ -167,6 +167,7 @@ public final class MainWindow implements StudyView {
         conPanel.add(conTop, BorderLayout.NORTH);
         conPanel.add(new JScrollPane(conceptArea), BorderLayout.CENTER);
         tabs.addTab("Concepts (F04)", conPanel);
+        tabs.addTab("Flashcards (F05)", new FlashcardPanel(controller, this));
         return tabs;
     }
 
@@ -237,7 +238,7 @@ public final class MainWindow implements StudyView {
                     summaryArea.setText(material.getFileName() + " (" + length.name().toLowerCase() + ")\n\n" + s.toText());
                     summaryArea.setCaretPosition(0);
                 },
-                summaryArea);
+                () -> summaryArea.setText(""));
     }
 
     void onAskClicked() {
@@ -258,7 +259,7 @@ public final class MainWindow implements StudyView {
                     answerArea.setText("Q: " + question + "\n\n" + a.toText());
                     answerArea.setCaretPosition(0);
                 },
-                answerArea);
+                () -> answerArea.setText(""));
     }
 
     void onExtractConceptsClicked() {
@@ -280,12 +281,13 @@ public final class MainWindow implements StudyView {
                     conceptArea.setCaretPosition(0);
                     refreshCourses(course.getId());
                 },
-                conceptArea);
+                () -> conceptArea.setText(""));
     }
 
     // ------------------------------------------------------------------ helpers
 
-    private <T> void runInBackground(String busyText, Callable<T> work, Consumer<T> onDone, JTextArea errorTarget) {
+    @Override
+    public <T> void runInBackground(String busyText, Callable<T> work, Consumer<T> onDone, Runnable onError) {
         setStatus(busyText);
         frame.getRootPane().setCursor(java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR));
         new SwingWorker<T, Void>() {
@@ -306,7 +308,7 @@ public final class MainWindow implements StudyView {
                     Throwable cause = e.getCause();
                     String msg = cause instanceof StudyException || cause instanceof IllegalArgumentException
                             ? cause.getMessage() : "Unexpected error: " + cause;
-                    errorTarget.setText("");
+                    onError.run();
                     showError(msg);
                 }
             }
@@ -364,8 +366,36 @@ public final class MainWindow implements StudyView {
         return p;
     }
 
-    private void setStatus(String text) {
+    @Override
+    public void setStatus(String text) {
         status.setText(text);
+    }
+
+    @Override
+    public Course selectedCourse() {
+        return courseList.getSelectedValue();
+    }
+
+    @Override
+    public Material selectedMaterial() {
+        return materialList.getSelectedValue();
+    }
+
+    @Override
+    public void reloadCourses() {
+        Course c = courseList.getSelectedValue();
+        String keepMaterial = materialList.getSelectedValue() == null ? null : materialList.getSelectedValue().getId();
+        refreshCourses(c == null ? null : c.getId());
+        for (int i = 0; i < materialModel.size(); i++) {
+            if (materialModel.get(i).getId().equals(keepMaterial)) {
+                materialList.setSelectedIndex(i);
+            }
+        }
+    }
+
+    @Override
+    public java.awt.Component window() {
+        return frame;
     }
 
     @Override

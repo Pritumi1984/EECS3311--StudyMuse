@@ -4,6 +4,8 @@ import com.studymuse.controller.StudyAgentController;
 import com.studymuse.domain.Answer;
 import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
+import com.studymuse.domain.Deck;
+import com.studymuse.domain.Flashcard;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
@@ -107,12 +109,86 @@ public class StudyCLI implements StudyView {
                     }
                     showResult(sb.toString());
                 }
+                case "flashcards" -> {
+                    need(t, 2, "flashcards generate <courseId> <material|concept> [count]");
+                    if (t.get(1).equalsIgnoreCase("generate")) {
+                        need(t, 4, "flashcards generate <courseId> <material|concept> [count]");
+                        int count = t.size() > 4 ? parseInt(t.get(4), "count") : 10;
+                        generateFlashcards(t.get(2), t.get(3), count);
+                    } else {
+                        throw new StudyException("Usage: flashcards generate <courseId> <material|concept> [count]");
+                    }
+                }
+                case "decks" -> {
+                    need(t, 2, "decks <courseId>");
+                    List<Deck> decks = controller.listDecks(t.get(1));
+                    if (decks.isEmpty()) {
+                        showResult("No flashcard decks yet. Try: flashcards generate " + t.get(1) + " <material> 10");
+                    } else {
+                        StringBuilder sb = new StringBuilder("Decks:\n");
+                        for (Deck d : decks) {
+                            sb.append("  ").append(d.getId()).append("  ").append(d).append('\n');
+                        }
+                        showResult(sb.toString());
+                    }
+                }
                 default -> showError("Unknown command '" + cmd + "'. Type 'help'.");
             }
         } catch (StudyException | IllegalArgumentException e) {
             showError(e.getMessage());
         } catch (RuntimeException e) {
             showError("Unexpected error: " + e);
+        }
+    }
+
+    /** F05: generate a preview deck, let the student drop bad cards, then save. */
+    private void generateFlashcards(String courseId, String source, int count) {
+        showResult("Generating " + count + " flashcards with " + controller.getLlmName() + " ...");
+        Deck deck = controller.generateFlashcards(courseId, source, count);
+        printDeck(deck);
+        if (deck.getCards().size() < count) {
+            showResult("Note: only " + deck.getCards().size() + " valid cards were created (asked for " + count + ").");
+        }
+        System.out.print("Numbers of cards to delete (e.g. 2 5), Enter to keep all, or 'cancel': ");
+        String reply;
+        try {
+            reply = in.readLine();
+        } catch (IOException e) {
+            reply = "cancel";
+        }
+        if (reply == null || reply.trim().equalsIgnoreCase("cancel")) {
+            showResult("Deck discarded. Nothing was saved.");
+            return;
+        }
+        List<Flashcard> cards = deck.getCards();
+        for (String part : reply.trim().split("[\\s,]+")) {
+            if (part.isBlank()) {
+                continue;
+            }
+            int n = parseInt(part, "card number");
+            if (n < 1 || n > cards.size()) {
+                throw new StudyException("There is no card " + n + ".");
+            }
+            deck.removeCard(cards.get(n - 1).getId());
+        }
+        Deck saved = controller.saveDeck(courseId, deck);
+        showResult("Saved deck " + saved + " (id " + saved.getId() + ").");
+    }
+
+    private void printDeck(Deck deck) {
+        StringBuilder sb = new StringBuilder("Preview: " + deck.getName() + "\n");
+        int i = 1;
+        for (Flashcard c : deck.getCards()) {
+            sb.append(String.format("%3d. [%s] %s%n      -> %s%n", i++, c.getTopic(), c.getFront(), c.getBack()));
+        }
+        showResult(sb.toString());
+    }
+
+    private static int parseInt(String text, String what) {
+        try {
+            return Integer.parseInt(text.trim());
+        } catch (NumberFormatException e) {
+            throw new StudyException("'" + text + "' is not a valid " + what + ".");
         }
     }
 
@@ -188,6 +264,8 @@ public class StudyCLI implements StudyView {
                   summarize <courseId> <material> [short|medium|detailed]   AI summary (F02)
                   ask <courseId> <question>            answer from your materials with sources (F03)
                   concepts <courseId> <material>       extract key concepts with definitions (F04)
+                  flashcards generate <courseId> <material|concept> [count]   AI flashcards, 5-50 (F05)
+                  decks <courseId>                     list saved flashcard decks
                   help | exit""";
     }
 
