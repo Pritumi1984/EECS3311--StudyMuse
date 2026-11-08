@@ -1,6 +1,9 @@
 package com.studymuse.controller;
 
+import com.studymuse.agent.AgentPlanner;
+import com.studymuse.agent.AgentResponse;
 import com.studymuse.agent.MemoryManager;
+import com.studymuse.domain.ChatMessage;
 import com.studymuse.domain.Answer;
 import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
@@ -57,6 +60,7 @@ public class StudyAgentController {
     private final String llmName;
     private ToolRegistry tools;
     private MemoryManager memory;
+    private AgentPlanner planner;
 
     public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
                                 QAService qaService, FlashcardService flashcardService, QuizService quizService,
@@ -209,9 +213,22 @@ public class StudyAgentController {
     // ---------------------------------------------------------------- F12 agent tools and memory
 
     /** Connects the agent's tools and memory (they are built from the services, after the controller). */
-    public void attachAgent(ToolRegistry toolRegistry, MemoryManager memoryManager) {
+    public void attachAgent(ToolRegistry toolRegistry, MemoryManager memoryManager, AgentPlanner agentPlanner) {
         this.tools = toolRegistry;
         this.memory = memoryManager;
+        this.planner = agentPlanner;
+    }
+
+    /** F12: one natural-language request; the agent plans, calls tools and answers. */
+    public AgentResponse chat(String courseId, String message) {
+        if (message == null || message.isBlank()) {
+            throw new StudyException("Type a message for the agent.");
+        }
+        return planner.run(materialService.getCourse(courseId).getId(), message.trim());
+    }
+
+    public List<ChatMessage> getChatHistory(String courseId) {
+        return memory.history(materialService.getCourse(courseId).getId()).recent(20);
     }
 
     public List<ToolDescription> listTools() {

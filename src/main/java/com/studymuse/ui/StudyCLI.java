@@ -1,5 +1,6 @@
 package com.studymuse.ui;
 
+import com.studymuse.agent.AgentResponse;
 import com.studymuse.controller.StudyAgentController;
 import com.studymuse.domain.Answer;
 import com.studymuse.domain.Concept;
@@ -85,6 +86,38 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                 return;
             }
             dispatch(tokens);
+        }
+    }
+
+    /** F12: one request to the agent; prints its answer and the tools it used. */
+    private void chatOnce(String courseId, String message) {
+        showResult("Agent is working (" + controller.getLlmName() + ") ...");
+        AgentResponse r = controller.chat(courseId, message);
+        showResult("Agent: " + r.toText());
+    }
+
+    private void chatLoop(String courseId) {
+        controller.getCourse(courseId);
+        showResult("Chatting with the StudyMuse agent about '" + courseId + "'. Type 'back' to return.");
+        while (true) {
+            System.out.print("\nyou> ");
+            String line;
+            try {
+                line = in.readLine();
+            } catch (IOException e) {
+                return;
+            }
+            if (line == null || line.trim().equalsIgnoreCase("back") || line.trim().equalsIgnoreCase("exit")) {
+                return;
+            }
+            if (line.isBlank()) {
+                continue;
+            }
+            try {
+                chatOnce(courseId, line.trim());
+            } catch (RuntimeException e) {
+                showResult("Error: " + e.getMessage());
+            }
         }
     }
 
@@ -204,6 +237,14 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                     }
                     ToolResult r = controller.runTool(t.get(1), t.get(2), args);
                     showResult(r.success() ? r.data() : "Tool error: " + r.error());
+                }
+                case "chat" -> {
+                    need(t, 2, "chat <courseId> [message]");
+                    if (t.size() > 2) {
+                        chatOnce(t.get(1), String.join(" ", t.subList(2, t.size())));
+                    } else {
+                        chatLoop(t.get(1));
+                    }
                 }
                 case "memory" -> {
                     need(t, 2, "memory <courseId>");
@@ -529,6 +570,7 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                   progress <courseId>                  progress summary (F11)
                   tools                                list the agent's tools (F12)
                   tool <courseId> <name> [json]        run one agent tool directly, e.g. {'query': 'Observer'}
+                  chat <courseId> [message]            talk to the AI agent (no message = chat mode)
                   memory <courseId>                    what the agent remembers for a course
                   help | exit""";
     }

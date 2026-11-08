@@ -2,6 +2,8 @@ package com.studymuse.agent;
 
 import com.studymuse.domain.Answer;
 import com.studymuse.domain.Chunk;
+import com.studymuse.tools.StudyTool;
+import com.studymuse.tools.ToolRegistry;
 import com.studymuse.util.Json;
 
 import java.util.ArrayList;
@@ -30,6 +32,39 @@ public class ResponseParser {
         } catch (IllegalArgumentException e) {
             throw new ResponseFormatException("The reply was not valid JSON (" + e.getMessage() + ").");
         }
+    }
+
+    /** F12: reads the LLM's next action: {"action", "tool", "arguments", "text", "remember"}. */
+    public AgentAction parseAction(String raw) {
+        Map<String, Object> json = parseJson(raw);
+        String type = Json.str(json, "action");
+        ActionType actionType;
+        try {
+            actionType = ActionType.valueOf(type == null ? "" : type.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseFormatException("\"action\" must be TOOL_CALL, FINAL_ANSWER or ASK_CLARIFICATION.");
+        }
+        String text = Json.str(json, "text");
+        if (actionType != ActionType.TOOL_CALL && (text == null || text.isBlank())) {
+            throw new ResponseFormatException("A " + actionType + " needs a \"text\".");
+        }
+        return new AgentAction(actionType, Json.str(json, "tool"), Json.obj(json.get("arguments")), text,
+                Json.obj(json.get("remember")));
+    }
+
+    /** F12: a tool call is only executed if the tool exists and its arguments pass the tool's own checks. */
+    public ValidationResult validateToolCall(AgentAction action, ToolRegistry registry) {
+        if (action.toolName() == null || action.toolName().isBlank()) {
+            return ValidationResult.invalid("A TOOL_CALL needs a \"tool\" name.");
+        }
+        StudyTool tool = registry.get(action.toolName());
+        if (tool == null) {
+            return ValidationResult.invalid("Unknown tool '" + action.toolName() + "'.");
+        }
+        if (!tool.validateArgs(action.arguments())) {
+            return ValidationResult.invalid("Invalid arguments for " + tool.getName() + ". Expected: " + tool.getParameters());
+        }
+        return ValidationResult.ok();
     }
 
     /** Returns a required non-empty string field or throws ResponseFormatException. */

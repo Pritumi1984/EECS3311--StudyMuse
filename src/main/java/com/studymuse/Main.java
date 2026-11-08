@@ -1,5 +1,6 @@
 package com.studymuse;
 
+import com.studymuse.agent.AgentPlanner;
 import com.studymuse.agent.MemoryManager;
 import com.studymuse.agent.ResponseParser;
 import com.studymuse.agent.StructuredLLMCall;
@@ -81,7 +82,9 @@ public final class Main {
         tools.register(new GetWeakTopicsTool(analytics, materials));
         tools.register(new CreateStudyPlanTool(planner, analytics, materials));
         tools.register(new GetProgressTool(tracker, materials));
-        controller.attachAgent(tools, new MemoryManager(repository));
+        MemoryManager memory = new MemoryManager(repository);
+        controller.attachAgent(tools, memory,
+                new AgentPlanner(llm, tools, memory, new ResponseParser(), AgentPlanner.DEFAULT_MAX_STEPS));
         return controller;
     }
 

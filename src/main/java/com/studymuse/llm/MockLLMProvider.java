@@ -50,6 +50,9 @@ public class MockLLMProvider implements LLMProvider {
             }
         }
         Map<String, Object> out = new LinkedHashMap<>();
+        if (prompt.contains("\"action\"") && prompt.contains("STEPS SO FAR:")) {
+            return Json.compact(mockAgentAction(prompt));
+        }
         if (prompt.contains("\"overview\"")) {
             out.put("overview", "[mock] " + (sentences.isEmpty() ? "No text." : sentences.get(0)));
             out.put("keyPoints", sentences.subList(0, Math.min(4, sentences.size())));
@@ -110,6 +113,75 @@ public class MockLLMProvider implements LLMProvider {
             return "[mock] This is the offline mock provider. Set LLM_PROVIDER and LLM_API_KEY in .env for real answers.";
         }
         return Json.compact(out);
+    }
+
+    /**
+     * F12 offline agent: picks one tool from keywords in the request, then gives a FINAL_ANSWER that
+     * repeats the tool result. Asks for the exam date when a plan is requested without one.
+     */
+    private static Map<String, Object> mockAgentAction(String prompt) {
+        int start = prompt.lastIndexOf("REQUEST:\n");
+        int end = prompt.lastIndexOf("\n\nSTEPS SO FAR:");
+        String request = start >= 0 && end > start ? prompt.substring(start + 9, end).trim() : "";
+        String steps = prompt.substring(end + 16);
+        String lower = request.toLowerCase();
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (steps.contains("Step 1:")) {
+            int r = steps.lastIndexOf("Result: ");
+            String last = r >= 0 ? steps.substring(r + 8).trim() : "";
+            out.put("action", "FINAL_ANSWER");
+            out.put("text", (last.startsWith("ERROR:") ? "[mock] The tool could not finish: " + last.substring(6).trim()
+                    : "[mock] Done. " + (last.length() > 600 ? last.substring(0, 600) + "..." : last)));
+            return out;
+        }
+        Map<String, Object> args = new LinkedHashMap<>();
+        String topic = topicOf(request);
+        String tool;
+        if (lower.contains("plan")) {
+            Matcher d = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})").matcher(request);
+            Matcher mem = Pattern.compile("- exam date: (\\d{4}-\\d{2}-\\d{2})").matcher(prompt);
+            String date = d.find() ? d.group(1) : mem.find() ? mem.group(1) : null;
+            if (date == null) {
+                out.put("action", "ASK_CLARIFICATION");
+                out.put("text", "[mock] When is your exam? Tell me the date (for example 2026-12-10) and how many hours a day you can study.");
+                return out;
+            }
+            Matcher h = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(?:h|hours?)\\b").matcher(lower);
+            tool = "create_study_plan";
+            args.put("examDate", date);
+            args.put("hoursPerDay", h.find() ? Double.parseDouble(h.group(1)) : 2);
+        } else if (lower.contains("mistake")) {
+            tool = "flashcards_from_mistakes";
+        } else if (lower.contains("weak")) {
+            tool = "get_weak_topics";
+        } else if (lower.contains("progress") || lower.contains("how am i doing")) {
+            tool = "get_progress";
+        } else if (lower.contains("quiz")) {
+            tool = "generate_quiz";
+            args.put("topics", List.of(topic));
+            args.put("count", Math.max(3, firstNumber(lower, 5)));
+        } else if (lower.contains("flashcard") || lower.contains("cards")) {
+            tool = "generate_flashcards";
+            args.put("source", topic);
+            args.put("count", firstNumber(lower, 5));
+        } else {
+            tool = "search_materials";
+            args.put("query", request);
+        }
+        out.put("action", "TOOL_CALL");
+        out.put("tool", tool);
+        out.put("arguments", args);
+        return out;
+    }
+
+    private static String topicOf(String request) {
+        Matcher m = Pattern.compile("(?i)\\b(?:on|about|for)\\s+(.+?)[.?!]*$").matcher(request.trim());
+        return m.find() ? m.group(1).replaceFirst("(?i)\\s+with\\s+\\d+.*$", "").trim() : "General";
+    }
+
+    private static int firstNumber(String text, int def) {
+        Matcher m = Pattern.compile("\\b(\\d{1,2})\\b").matcher(text);
+        return m.find() ? Integer.parseInt(m.group(1)) : def;
     }
 
     private static List<Object> mockQuestions(String prompt, List<String> sentences) {

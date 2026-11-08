@@ -176,11 +176,18 @@ public final class MainWindow implements StudyView, WorkspaceContext {
         tabs.addTab("Study Plan (F10)", planPanel);
         DashboardView dashboard = new DashboardView(controller, this);
         tabs.insertTab("Dashboard (F11)", null, dashboard, null, 0);
+        AgentChatPanel chat = new AgentChatPanel(controller, this, () -> {
+            quizPanel.reloadQuizzes(null);
+            planPanel.showSavedPlan();
+            dashboard.refresh();
+        });
+        tabs.insertTab("Agent Chat (F12)", null, chat, null, 1);
         tabs.setSelectedIndex(0);
         courseList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 planPanel.showSavedPlan();
                 dashboard.refresh();
+                chat.showHistory();
             }
         });
         courseList.addListSelectionListener(e -> {
