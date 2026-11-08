@@ -20,6 +20,8 @@ public class Course {
     private final List<QuizResult> quizResults = new ArrayList<>();
     private final List<WeakTopic> weakTopics = new ArrayList<>();
     private StudyPlan studyPlan;
+    private final List<ChatMessage> chatHistory = new ArrayList<>();
+    private final Map<String, String> agentFacts = new LinkedHashMap<>();
 
     public Course(String id, String name) {
         this.id = id;
@@ -40,6 +42,19 @@ public class Course {
     public List<QuizResult> getQuizResults() { return List.copyOf(quizResults); }
     public void addQuizResult(QuizResult r) { quizResults.add(r); }
     public List<WeakTopic> getWeakTopics() { return List.copyOf(weakTopics); }
+
+    public List<ChatMessage> getChatHistory() { return List.copyOf(chatHistory); }
+    public Map<String, String> getAgentFacts() { return Map.copyOf(agentFacts); }
+
+    /** Keeps only the newest maxMessages turns. */
+    public void addChatMessage(ChatMessage m, int maxMessages) {
+        chatHistory.add(m);
+        while (chatHistory.size() > maxMessages) {
+            chatHistory.remove(0);
+        }
+    }
+
+    public void putAgentFact(String key, String value) { agentFacts.put(key, value); }
 
     public StudyPlan getStudyPlan() { return studyPlan; }
     public void setStudyPlan(StudyPlan plan) { this.studyPlan = plan; }
@@ -145,6 +160,12 @@ public class Course {
         }
         m.put("weakTopics", wt);
         m.put("studyPlan", studyPlan == null ? null : studyPlan.toMap());
+        List<Object> ch = new ArrayList<>();
+        for (ChatMessage cm : chatHistory) {
+            ch.add(cm.toMap());
+        }
+        m.put("chatHistory", ch);
+        m.put("agentFacts", new LinkedHashMap<>(agentFacts));
         return m;
     }
 
@@ -171,6 +192,10 @@ public class Course {
         for (Object o : Json.list(m, "weakTopics")) {
             c.weakTopics.add(WeakTopic.fromMap(Json.obj(o)));
         }
+        for (Object o : Json.list(m, "chatHistory")) {
+            c.chatHistory.add(ChatMessage.fromMap(Json.obj(o)));
+        }
+        Json.obj(m.get("agentFacts")).forEach((k, v) -> c.agentFacts.put(k, String.valueOf(v)));
         if (m.get("studyPlan") != null) {
             c.studyPlan = StudyPlan.fromMap(Json.obj(m.get("studyPlan")));
         }

@@ -1,5 +1,6 @@
 package com.studymuse;
 
+import com.studymuse.agent.MemoryManager;
 import com.studymuse.agent.ResponseParser;
 import com.studymuse.agent.StructuredLLMCall;
 import com.studymuse.config.AppConfig;
@@ -24,6 +25,14 @@ import com.studymuse.services.QAService;
 import com.studymuse.services.PlanValidator;
 import com.studymuse.services.QuizService;
 import com.studymuse.services.StudyPlanService;
+import com.studymuse.tools.CreateStudyPlanTool;
+import com.studymuse.tools.GenerateFlashcardsTool;
+import com.studymuse.tools.GenerateQuizTool;
+import com.studymuse.tools.GetProgressTool;
+import com.studymuse.tools.GetWeakTopicsTool;
+import com.studymuse.tools.MistakesToFlashcardsTool;
+import com.studymuse.tools.SearchMaterialsTool;
+import com.studymuse.tools.ToolRegistry;
 import com.studymuse.services.SpacedRepetitionScheduler;
 import com.studymuse.ui.MainWindow;
 import com.studymuse.ui.StudyCLI;
@@ -59,8 +68,21 @@ public final class Main {
                 QuestionType.MULTIPLE_CHOICE, new MultipleChoiceGrader(),
                 QuestionType.SHORT_ANSWER, new ShortAnswerGrader(ai)), tracker);
         AnalyticsService analytics = new AnalyticsService(ai, repository);
-        return new StudyAgentController(materials, analysis, qa, flashcards, quizzes, analytics,
-                new StudyPlanService(ai, new PlanValidator(), repository, tracker), tracker, llm.getProviderName());
+        StudyPlanService planner = new StudyPlanService(ai, new PlanValidator(), repository, tracker);
+        StudyAgentController controller = new StudyAgentController(materials, analysis, qa, flashcards, quizzes,
+                analytics, planner, tracker, llm.getProviderName());
+
+        // F12: the agent's tools wrap the same services the GUI and CLI use
+        ToolRegistry tools = new ToolRegistry();
+        tools.register(new SearchMaterialsTool(index));
+        tools.register(new GenerateQuizTool(quizzes, materials));
+        tools.register(new GenerateFlashcardsTool(flashcards, materials));
+        tools.register(new MistakesToFlashcardsTool(flashcards, materials));
+        tools.register(new GetWeakTopicsTool(analytics, materials));
+        tools.register(new CreateStudyPlanTool(planner, analytics, materials));
+        tools.register(new GetProgressTool(tracker, materials));
+        controller.attachAgent(tools, new MemoryManager(repository));
+        return controller;
     }
 
     public static void main(String[] args) {

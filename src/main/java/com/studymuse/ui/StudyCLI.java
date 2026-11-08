@@ -22,6 +22,9 @@ import com.studymuse.services.DuplicateMaterialException;
 import com.studymuse.services.StudyException;
 import com.studymuse.progress.ProgressEvent;
 import com.studymuse.progress.ProgressObserver;
+import com.studymuse.tools.ToolDescription;
+import com.studymuse.tools.ToolResult;
+import com.studymuse.util.Json;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -182,6 +185,29 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                     } else {
                         makePlan(t);
                     }
+                }
+                case "tools" -> {
+                    StringBuilder sb = new StringBuilder("Agent tools:\n");
+                    for (ToolDescription d : controller.listTools()) {
+                        sb.append(d.toPromptLine()).append('\n');
+                    }
+                    showResult(sb.toString());
+                }
+                case "tool" -> {
+                    need(t, 3, "tool <courseId> <toolName> [json-arguments]");
+                    String json = t.size() > 3 ? String.join(" ", t.subList(3, t.size())) : "{}";
+                    Map<String, Object> args;
+                    try {
+                        args = Json.parseObject(json.replace('\'', '"')); // the CLI strips double quotes
+                    } catch (IllegalArgumentException e) {
+                        throw new StudyException("Arguments must be JSON with single quotes, e.g. {'query': 'Observer'}");
+                    }
+                    ToolResult r = controller.runTool(t.get(1), t.get(2), args);
+                    showResult(r.success() ? r.data() : "Tool error: " + r.error());
+                }
+                case "memory" -> {
+                    need(t, 2, "memory <courseId>");
+                    showResult(controller.getMemorySummary(t.get(1)));
                 }
                 case "progress" -> {
                     need(t, 2, "progress <courseId>");
@@ -501,6 +527,9 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                   plan <courseId> show                 show the saved plan
                   plan <courseId> done <YYYY-MM-DD> <n>   mark session n of that day as done
                   progress <courseId>                  progress summary (F11)
+                  tools                                list the agent's tools (F12)
+                  tool <courseId> <name> [json]        run one agent tool directly, e.g. {'query': 'Observer'}
+                  memory <courseId>                    what the agent remembers for a course
                   help | exit""";
     }
 

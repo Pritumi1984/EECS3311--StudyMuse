@@ -1,5 +1,6 @@
 package com.studymuse.controller;
 
+import com.studymuse.agent.MemoryManager;
 import com.studymuse.domain.Answer;
 import com.studymuse.domain.Concept;
 import com.studymuse.domain.Course;
@@ -13,6 +14,9 @@ import com.studymuse.domain.StudySession;
 import com.studymuse.progress.ProgressObserver;
 import com.studymuse.progress.ProgressStats;
 import com.studymuse.progress.ProgressTracker;
+import com.studymuse.tools.ToolDescription;
+import com.studymuse.tools.ToolRegistry;
+import com.studymuse.tools.ToolResult;
 import com.studymuse.domain.Quiz;
 import com.studymuse.domain.QuizRequest;
 import com.studymuse.domain.QuizResult;
@@ -51,6 +55,8 @@ public class StudyAgentController {
     private final StudyPlanService studyPlanService;
     private final ProgressTracker progressTracker;
     private final String llmName;
+    private ToolRegistry tools;
+    private MemoryManager memory;
 
     public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
                                 QAService qaService, FlashcardService flashcardService, QuizService quizService,
@@ -198,6 +204,29 @@ public class StudyAgentController {
 
     public StudySession setPlanSessionDone(String courseId, LocalDate date, int position, boolean done) {
         return studyPlanService.setSessionDone(materialService.getCourse(courseId), date, position, done);
+    }
+
+    // ---------------------------------------------------------------- F12 agent tools and memory
+
+    /** Connects the agent's tools and memory (they are built from the services, after the controller). */
+    public void attachAgent(ToolRegistry toolRegistry, MemoryManager memoryManager) {
+        this.tools = toolRegistry;
+        this.memory = memoryManager;
+    }
+
+    public List<ToolDescription> listTools() {
+        return tools.describeAll();
+    }
+
+    /** Runs one agent tool directly (useful for testing a tool without the LLM). */
+    public ToolResult runTool(String courseId, String toolName, Map<String, Object> args) {
+        Map<String, Object> withCourse = new java.util.LinkedHashMap<>(args);
+        withCourse.put("courseId", materialService.getCourse(courseId).getId());
+        return tools.execute(toolName, withCourse);
+    }
+
+    public String getMemorySummary(String courseId) {
+        return memory.getRelevantContext(materialService.getCourse(courseId).getId(), "");
     }
 
     public String getLlmName() {
