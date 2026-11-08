@@ -14,6 +14,7 @@ import com.studymuse.domain.WeakTopic;
 import com.studymuse.llm.Message;
 import com.studymuse.llm.Prompt;
 import com.studymuse.persistence.CourseRepository;
+import com.studymuse.progress.ProgressTracker;
 import com.studymuse.util.Json;
 
 import java.time.LocalDate;
@@ -46,8 +47,11 @@ public class StudyPlanService {
     private final StructuredLLMCall ai;
     private final PlanValidator validator;
     private final CourseRepository repository;
+    private final ProgressTracker tracker;
 
-    public StudyPlanService(StructuredLLMCall ai, PlanValidator validator, CourseRepository repository) {
+    public StudyPlanService(StructuredLLMCall ai, PlanValidator validator, CourseRepository repository,
+                            ProgressTracker tracker) {
+        this.tracker = tracker;
         this.ai = ai;
         this.validator = validator;
         this.repository = repository;
@@ -119,6 +123,28 @@ public class StudyPlanService {
         course.setStudyPlan(plan);
         repository.savePlan(course.getId(), plan);
         return plan;
+    }
+
+    /** F11: ticks a plan session as done (or not done); position is its order within the day (0-based). */
+    public StudySession setSessionDone(Course course, LocalDate date, int position, boolean done) {
+        StudyPlan plan = course.getStudyPlan();
+        if (plan == null) {
+            throw new StudyException("There is no study plan yet.");
+        }
+        for (StudyDay d : plan.getDays()) {
+            if (d.getDate().equals(date)) {
+                List<StudySession> sessions = d.getSessions();
+                if (position < 0 || position >= sessions.size()) {
+                    throw new StudyException(date + " has no session number " + (position + 1) + ".");
+                }
+                StudySession s = sessions.get(position);
+                s.setDone(done);
+                repository.savePlan(course.getId(), plan);
+                tracker.recordPlanSession(course.getId(), s);
+                return s;
+            }
+        }
+        throw new StudyException("The plan has no sessions on " + date + ".");
     }
 
     private Prompt draftPrompt(List<LocalDate> dates, int dailyMinutes, List<String> topics, Set<String> weak,

@@ -11,6 +11,7 @@ import com.studymuse.domain.Material;
 import com.studymuse.domain.Rating;
 import com.studymuse.domain.ReviewRecord;
 import com.studymuse.persistence.CourseRepository;
+import com.studymuse.progress.ProgressTracker;
 import com.studymuse.util.Json;
 
 import java.time.LocalDate;
@@ -41,9 +42,11 @@ public class FlashcardService {
     private final SearchIndex index;
     private final CourseRepository repository;
     private final SpacedRepetitionScheduler scheduler;
+    private final ProgressTracker tracker;
 
     public FlashcardService(StructuredLLMCall ai, SearchIndex index, CourseRepository repository,
-                            SpacedRepetitionScheduler scheduler) {
+                            SpacedRepetitionScheduler scheduler, ProgressTracker tracker) {
+        this.tracker = tracker;
         this.ai = ai;
         this.index = index;
         this.repository = repository;
@@ -82,6 +85,7 @@ public class FlashcardService {
         scheduler.nextReview(card, rating, today);
         course.addReview(new ReviewRecord(card.getId(), card.getTopic(), rating, today.toString()));
         repository.saveCourse(course);
+        tracker.recordReview(course.getId(), card, rating);
         return card;
     }
 

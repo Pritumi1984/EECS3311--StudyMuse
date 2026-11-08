@@ -9,6 +9,10 @@ import com.studymuse.domain.Rating;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.PlanRequest;
 import com.studymuse.domain.StudyPlan;
+import com.studymuse.domain.StudySession;
+import com.studymuse.progress.ProgressObserver;
+import com.studymuse.progress.ProgressStats;
+import com.studymuse.progress.ProgressTracker;
 import com.studymuse.domain.Quiz;
 import com.studymuse.domain.QuizRequest;
 import com.studymuse.domain.QuizResult;
@@ -45,11 +49,13 @@ public class StudyAgentController {
     private final QuizService quizService;
     private final AnalyticsService analyticsService;
     private final StudyPlanService studyPlanService;
+    private final ProgressTracker progressTracker;
     private final String llmName;
 
     public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
                                 QAService qaService, FlashcardService flashcardService, QuizService quizService,
-                                AnalyticsService analyticsService, StudyPlanService studyPlanService, String llmName) {
+                                AnalyticsService analyticsService, StudyPlanService studyPlanService,
+                                ProgressTracker progressTracker, String llmName) {
         this.materialService = materialService;
         this.analysisService = analysisService;
         this.qaService = qaService;
@@ -57,6 +63,7 @@ public class StudyAgentController {
         this.quizService = quizService;
         this.analyticsService = analyticsService;
         this.studyPlanService = studyPlanService;
+        this.progressTracker = progressTracker;
         this.llmName = llmName;
     }
 
@@ -176,6 +183,21 @@ public class StudyAgentController {
 
     public Optional<StudyPlan> getPlan(String courseId) {
         return Optional.ofNullable(materialService.getCourse(courseId).getStudyPlan());
+    }
+
+    // ---------------------------------------------------------------- F11 progress tracking
+
+    public ProgressStats getProgress(String courseId) {
+        return progressTracker.getStats(materialService.getCourse(courseId));
+    }
+
+    /** Lets a view subscribe to progress events (OBSERVER) without touching the services. */
+    public void addProgressObserver(ProgressObserver observer) {
+        progressTracker.addObserver(observer);
+    }
+
+    public StudySession setPlanSessionDone(String courseId, LocalDate date, int position, boolean done) {
+        return studyPlanService.setSessionDone(materialService.getCourse(courseId), date, position, done);
     }
 
     public String getLlmName() {

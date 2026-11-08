@@ -20,6 +20,8 @@ import com.studymuse.domain.Summary;
 import com.studymuse.domain.SummaryLength;
 import com.studymuse.services.DuplicateMaterialException;
 import com.studymuse.services.StudyException;
+import com.studymuse.progress.ProgressEvent;
+import com.studymuse.progress.ProgressObserver;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,13 +41,20 @@ import java.util.List;
  * command directly, e.g.  run.bat cli upload eecs3311 sample-data\design-patterns.txt
  * Every command only parses input and calls the StudyAgentController facade.
  */
-public class StudyCLI implements StudyView {
+public final class StudyCLI implements StudyView, ProgressObserver {
 
     private final StudyAgentController controller;
     private final BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 
     public StudyCLI(StudyAgentController controller) {
         this.controller = controller;
+        controller.addProgressObserver(this);
+    }
+
+    /** OBSERVER: the CLI prints a one-line notice whenever progress changes. */
+    @Override
+    public void onProgressUpdated(ProgressEvent event) {
+        System.out.println("  [progress] " + event.description());
     }
 
     public void run(String[] args) {
@@ -162,12 +171,21 @@ public class StudyCLI implements StudyView {
                 }
                 case "plan" -> {
                     need(t, 2, "plan <courseId> --exam YYYY-MM-DD --hours 2 [--topics \"A,B\"]  |  plan <courseId> show");
-                    if (t.size() > 2 && t.get(2).equalsIgnoreCase("show")) {
+                    if (t.size() > 4 && t.get(2).equalsIgnoreCase("done")) {
+                        LocalDate date = LocalDate.parse(t.get(3));
+                        int n = parseInt(t.get(4), "session number");
+                        controller.setPlanSessionDone(t.get(1), date, n - 1, true);
+                        showResult("Marked session " + n + " on " + date + " as done.");
+                    } else if (t.size() > 2 && t.get(2).equalsIgnoreCase("show")) {
                         showResult(controller.getPlan(t.get(1)).map(StudyPlan::toText)
                                 .orElse("No study plan yet. Create one: plan " + t.get(1) + " --exam YYYY-MM-DD --hours 2"));
                     } else {
                         makePlan(t);
                     }
+                }
+                case "progress" -> {
+                    need(t, 2, "progress <courseId>");
+                    showResult(controller.getProgress(t.get(1)).toText());
                 }
                 case "weak-topics" -> {
                     need(t, 2, "weak-topics <courseId>");
@@ -481,6 +499,8 @@ public class StudyCLI implements StudyView {
                   weak-topics <courseId>               find weak topics and why you miss them (F09)
                   plan <courseId> --exam YYYY-MM-DD --hours 2 [--topics "A,B"]   day-by-day study plan (F10)
                   plan <courseId> show                 show the saved plan
+                  plan <courseId> done <YYYY-MM-DD> <n>   mark session n of that day as done
+                  progress <courseId>                  progress summary (F11)
                   help | exit""";
     }
 

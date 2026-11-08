@@ -15,6 +15,7 @@ import com.studymuse.llm.LLMProvider;
 import com.studymuse.llm.LLMProviderFactory;
 import com.studymuse.persistence.CourseRepository;
 import com.studymuse.persistence.JsonCourseRepository;
+import com.studymuse.progress.ProgressTracker;
 import com.studymuse.services.AnalyticsService;
 import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
@@ -44,6 +45,7 @@ public final class Main {
             System.out.println(factory.getWarning());
         }
         LLMClient llm = new LLMClient(provider);
+        ProgressTracker tracker = new ProgressTracker();
 
         CourseRepository repository = new JsonCourseRepository(config.getDataDir());
         SearchIndex index = new SearchIndex();
@@ -52,13 +54,13 @@ public final class Main {
         StructuredLLMCall ai = new StructuredLLMCall(llm, new ResponseParser());
         MaterialAnalysisService analysis = new MaterialAnalysisService(ai, repository);
         QAService qa = new QAService(index, ai);
-        FlashcardService flashcards = new FlashcardService(ai, index, repository, new SpacedRepetitionScheduler());
+        FlashcardService flashcards = new FlashcardService(ai, index, repository, new SpacedRepetitionScheduler(), tracker);
         QuizService quizzes = new QuizService(ai, index, repository, Map.of(
                 QuestionType.MULTIPLE_CHOICE, new MultipleChoiceGrader(),
-                QuestionType.SHORT_ANSWER, new ShortAnswerGrader(ai)));
+                QuestionType.SHORT_ANSWER, new ShortAnswerGrader(ai)), tracker);
         AnalyticsService analytics = new AnalyticsService(ai, repository);
         return new StudyAgentController(materials, analysis, qa, flashcards, quizzes, analytics,
-                new StudyPlanService(ai, new PlanValidator(), repository), llm.getProviderName());
+                new StudyPlanService(ai, new PlanValidator(), repository, tracker), tracker, llm.getProviderName());
     }
 
     public static void main(String[] args) {

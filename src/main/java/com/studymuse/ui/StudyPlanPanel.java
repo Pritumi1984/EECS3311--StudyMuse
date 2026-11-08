@@ -6,6 +6,8 @@ import com.studymuse.domain.PlanRequest;
 import com.studymuse.domain.StudyDay;
 import com.studymuse.domain.StudyPlan;
 import com.studymuse.domain.StudySession;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import com.studymuse.services.StudyException;
 
 import javax.swing.JButton;
@@ -45,6 +47,7 @@ class StudyPlanPanel extends JPanel {
         }
     };
     private final JTable table = new JTable(model);
+    private transient StudyPlan shownPlan;
     protected final JLabel info = new JLabel("Enter your exam date and daily hours. Leave topics empty to use all course topics.");
 
     StudyPlanPanel(StudyAgentController controller, WorkspaceContext ctx) {
@@ -66,6 +69,15 @@ class StudyPlanPanel extends JPanel {
         top.add(form, BorderLayout.NORTH);
         top.add(form2, BorderLayout.SOUTH);
         table.setRowHeight(22);
+        table.setToolTipText("Double-click a session to mark it done (updates the dashboard)");
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
+                    toggleDone(table.getSelectedRow());
+                }
+            }
+        });
         table.getColumnModel().getColumn(3).setPreferredWidth(220);
         add(top, BorderLayout.NORTH);
         add(new JScrollPane(table), BorderLayout.CENTER);
@@ -110,7 +122,32 @@ class StudyPlanPanel extends JPanel {
         }
     }
 
+    /** F11: double-clicking a row ticks the session off (or reopens it). */
+    void toggleDone(int row) {
+        Course course = ctx.selectedCourse();
+        if (course == null || shownPlan == null) {
+            return;
+        }
+        int r = 0;
+        for (StudyDay d : shownPlan.getDays()) {
+            List<StudySession> sessions = d.getSessions();
+            for (int i = 0; i < sessions.size(); i++, r++) {
+                if (r == row) {
+                    try {
+                        StudySession s = controller.setPlanSessionDone(course.getId(), d.getDate(), i, !sessions.get(i).isDone());
+                        model.setValueAt(s.isDone() ? "yes" : "", row, 5);
+                        sessions.get(i).setDone(s.isDone());
+                    } catch (StudyException e) {
+                        ctx.showError(e.getMessage());
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
     protected void showPlan(StudyPlan plan) {
+        shownPlan = plan;
         model.setRowCount(0);
         for (StudyDay d : plan.getDays()) {
             for (StudySession s : d.getSessions()) {
@@ -121,6 +158,6 @@ class StudyPlanPanel extends JPanel {
         String omitted = plan.getOmittedTopics().isEmpty() ? ""
                 : "  Not enough time for: " + String.join(", ", plan.getOmittedTopics()) + ".";
         info.setText("Exam " + plan.getExamDate() + " - " + plan.getDays().size() + " days, " + plan.totalMinutes()
-                + " min total (" + plan.getSource() + ")." + omitted);
+                + " min total (" + plan.getSource() + "). Double-click a session to mark it done." + omitted);
     }
 }

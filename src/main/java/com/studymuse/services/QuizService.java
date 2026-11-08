@@ -13,6 +13,7 @@ import com.studymuse.domain.QuizRequest;
 import com.studymuse.domain.QuizResult;
 import com.studymuse.grading.GradingStrategy;
 import com.studymuse.persistence.CourseRepository;
+import com.studymuse.progress.ProgressTracker;
 import com.studymuse.util.Json;
 
 import java.time.LocalDateTime;
@@ -46,10 +47,12 @@ public class QuizService {
     protected final SearchIndex index;
     protected final CourseRepository repository;
     private final Map<QuestionType, GradingStrategy> graders;
+    private final ProgressTracker tracker;
 
     /** graders: the STRATEGY for each question type (context = this service). */
     public QuizService(StructuredLLMCall ai, SearchIndex index, CourseRepository repository,
-                       Map<QuestionType, GradingStrategy> graders) {
+                       Map<QuestionType, GradingStrategy> graders, ProgressTracker tracker) {
+        this.tracker = tracker;
         this.ai = ai;
         this.index = index;
         this.repository = repository;
@@ -82,6 +85,7 @@ public class QuizService {
         QuizResult result = new QuizResult("result-" + UUID.randomUUID().toString().substring(0, 6), quiz.getId(),
                 quiz.getTitle(), LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), grades);
         repository.saveQuizResult(course.getId(), result);
+        tracker.recordQuizResult(course.getId(), result);
         return result;
     }
 

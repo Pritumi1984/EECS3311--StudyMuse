@@ -174,9 +174,13 @@ public final class MainWindow implements StudyView, WorkspaceContext {
         tabs.addTab("Weak Topics (F09)", new WeakTopicsPanel(controller, this));
         StudyPlanPanel planPanel = new StudyPlanPanel(controller, this);
         tabs.addTab("Study Plan (F10)", planPanel);
+        DashboardView dashboard = new DashboardView(controller, this);
+        tabs.insertTab("Dashboard (F11)", null, dashboard, null, 0);
+        tabs.setSelectedIndex(0);
         courseList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 planPanel.showSavedPlan();
+                dashboard.refresh();
             }
         });
         courseList.addListSelectionListener(e -> {
