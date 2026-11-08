@@ -15,6 +15,9 @@ public class DocumentReaderFactory {
 
     public DocumentReaderFactory() {
         readers.add(new PlainTextDocumentReader());
+        if (PdfDocumentReader.isAvailable()) {
+            readers.add(new PdfDocumentReader()); // optional: needs PDFBox in lib/ (see run.sh / run.bat)
+        }
     }
 
     public void register(DocumentReader reader) {
@@ -29,6 +32,10 @@ public class DocumentReaderFactory {
             if (r.supports(ext)) {
                 return r;
             }
+        }
+        if ("pdf".equalsIgnoreCase(ext)) {
+            throw new UnsupportedFileException(name, supportedTypes()
+                    + " (PDF support needs the PDFBox library: start StudyMuse with run.sh / run.bat once while online)");
         }
         throw new UnsupportedFileException(name, supportedTypes());
     }

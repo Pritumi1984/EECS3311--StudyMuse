@@ -11,6 +11,10 @@ data/
 logs/
 *.class
 
+# Downloaded libraries (run.sh / run.bat fetch PDFBox here)
+lib/*.jar
+lib/*.part
+
 # IDE / OS
 .idea/
 *.iml
