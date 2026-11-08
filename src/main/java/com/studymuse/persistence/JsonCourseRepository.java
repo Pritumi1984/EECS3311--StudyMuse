@@ -4,6 +4,7 @@ import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.QuizResult;
+import com.studymuse.domain.StudyPlan;
 import com.studymuse.services.StudyException;
 import com.studymuse.util.Json;
 
@@ -92,6 +93,13 @@ public class JsonCourseRepository implements CourseRepository {
     @Override
     public synchronized List<QuizResult> findQuizResults(String courseId) {
         return findCourse(courseId).map(Course::getQuizResults).orElse(List.of());
+    }
+
+    @Override
+    public synchronized void savePlan(String courseId, StudyPlan plan) {
+        Course course = findCourse(courseId).orElseThrow(() -> new StudyException("No course with id '" + courseId + "'."));
+        course.setStudyPlan(plan);
+        saveCourse(course);
     }
 
     private Path fileFor(String id) {

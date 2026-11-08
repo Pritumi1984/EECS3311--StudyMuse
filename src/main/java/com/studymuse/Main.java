@@ -20,7 +20,9 @@ import com.studymuse.services.FlashcardService;
 import com.studymuse.services.MaterialAnalysisService;
 import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
+import com.studymuse.services.PlanValidator;
 import com.studymuse.services.QuizService;
+import com.studymuse.services.StudyPlanService;
 import com.studymuse.services.SpacedRepetitionScheduler;
 import com.studymuse.ui.MainWindow;
 import com.studymuse.ui.StudyCLI;
@@ -55,7 +57,8 @@ public final class Main {
                 QuestionType.MULTIPLE_CHOICE, new MultipleChoiceGrader(),
                 QuestionType.SHORT_ANSWER, new ShortAnswerGrader(ai)));
         AnalyticsService analytics = new AnalyticsService(ai, repository);
-        return new StudyAgentController(materials, analysis, qa, flashcards, quizzes, analytics, llm.getProviderName());
+        return new StudyAgentController(materials, analysis, qa, flashcards, quizzes, analytics,
+                new StudyPlanService(ai, new PlanValidator(), repository), llm.getProviderName());
     }
 
     public static void main(String[] args) {

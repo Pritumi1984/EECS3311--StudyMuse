@@ -7,6 +7,8 @@ import com.studymuse.domain.Deck;
 import com.studymuse.domain.Flashcard;
 import com.studymuse.domain.Rating;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.PlanRequest;
+import com.studymuse.domain.StudyPlan;
 import com.studymuse.domain.Quiz;
 import com.studymuse.domain.QuizRequest;
 import com.studymuse.domain.QuizResult;
@@ -20,6 +22,7 @@ import com.studymuse.services.MaterialService;
 import com.studymuse.services.QAService;
 import com.studymuse.services.QuizService;
 import com.studymuse.services.StudyException;
+import com.studymuse.services.StudyPlanService;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -41,17 +44,19 @@ public class StudyAgentController {
     private final FlashcardService flashcardService;
     private final QuizService quizService;
     private final AnalyticsService analyticsService;
+    private final StudyPlanService studyPlanService;
     private final String llmName;
 
     public StudyAgentController(MaterialService materialService, MaterialAnalysisService analysisService,
                                 QAService qaService, FlashcardService flashcardService, QuizService quizService,
-                                AnalyticsService analyticsService, String llmName) {
+                                AnalyticsService analyticsService, StudyPlanService studyPlanService, String llmName) {
         this.materialService = materialService;
         this.analysisService = analysisService;
         this.qaService = qaService;
         this.flashcardService = flashcardService;
         this.quizService = quizService;
         this.analyticsService = analyticsService;
+        this.studyPlanService = studyPlanService;
         this.llmName = llmName;
     }
 
@@ -155,6 +160,22 @@ public class StudyAgentController {
 
     public WeakTopicReport getWeakTopics(String courseId) {
         return analyticsService.findWeakTopics(materialService.getCourse(courseId));
+    }
+
+    // ---------------------------------------------------------------- F10 study plan
+
+    /** SD-07: the controller first gets the weak topics (F09), then passes them to the planner. */
+    public StudyPlan generatePlan(String courseId, PlanRequest request) {
+        Course course = materialService.getCourse(courseId);
+        if (request.examDate() == null || !request.examDate().isAfter(LocalDate.now())) {
+            throw new StudyException("The exam date must be after today.");
+        }
+        List<com.studymuse.domain.WeakTopic> weak = analyticsService.findWeakTopics(course).weakTopics();
+        return studyPlanService.generatePlan(materialService.getCourse(courseId), request, weak, LocalDate.now());
+    }
+
+    public Optional<StudyPlan> getPlan(String courseId) {
+        return Optional.ofNullable(materialService.getCourse(courseId).getStudyPlan());
     }
 
     public String getLlmName() {

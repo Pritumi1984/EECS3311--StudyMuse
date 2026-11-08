@@ -64,6 +64,8 @@ public class MockLLMProvider implements LLMProvider {
             double ratio = model.isEmpty() ? 0 : (double) overlap / model.size();
             out.put("score", ratio >= 0.5 ? 1 : ratio >= 0.2 ? 0.5 : 0);
             out.put("reason", "[mock] " + Math.round(ratio * 100) + "% of the model answer's key words were used.");
+        } else if (prompt.contains("\"days\"")) {
+            out.put("days", mockPlan(prompt));
         } else if (prompt.contains("\"diagnoses\"")) {
             List<Object> ds = new ArrayList<>();
             Matcher tm = Pattern.compile("TOPIC: (.+?) \\(").matcher(prompt);
@@ -150,6 +152,36 @@ public class MockLLMProvider implements LLMProvider {
             qs.add(q);
         }
         return qs;
+    }
+
+    /** A valid plan that rotates the listed topics within the daily minutes. */
+    private static List<Object> mockPlan(String prompt) {
+        String[] dates = lineAfter(prompt, "PLAN DATES:", "").split(",\\s*");
+        int minutes = Integer.parseInt(lineAfter(prompt, "DAILY MINUTES:", "60").split("\\s")[0]);
+        List<String> topics = new ArrayList<>();
+        Matcher tm = Pattern.compile("(?m)^- (.+?)( \\(WEAK.*)?$").matcher(prompt.substring(Math.max(0, prompt.indexOf("TOPICS TO INCLUDE"))));
+        while (tm.find()) {
+            topics.add(tm.group(1).trim());
+        }
+        if (topics.isEmpty()) {
+            topics.add("General review");
+        }
+        String[] acts = {"READ_NOTES", "REVIEW_FLASHCARDS", "TAKE_QUIZ"};
+        List<Object> days = new ArrayList<>();
+        int k = 0;
+        int per = Math.max(1, Math.min(2, minutes / 30));
+        for (String d : dates) {
+            if (d.isBlank()) {
+                continue;
+            }
+            List<Object> sessions = new ArrayList<>();
+            for (int i = 0; i < per; i++, k++) {
+                sessions.add(Map.of("topic", topics.get(k % topics.size()), "activity", acts[(k / topics.size()) % 3],
+                        "minutes", minutes / per));
+            }
+            days.add(Map.of("date", d.trim(), "sessions", sessions));
+        }
+        return days;
     }
 
     private static Set<String> words(String text) {

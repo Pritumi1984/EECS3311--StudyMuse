@@ -4,6 +4,7 @@ import com.studymuse.domain.Course;
 import com.studymuse.domain.Deck;
 import com.studymuse.domain.Material;
 import com.studymuse.domain.QuizResult;
+import com.studymuse.domain.StudyPlan;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,4 +25,6 @@ public interface CourseRepository {
     void saveQuizResult(String courseId, QuizResult result);
 
     List<QuizResult> findQuizResults(String courseId);
+
+    void savePlan(String courseId, StudyPlan plan);
 }

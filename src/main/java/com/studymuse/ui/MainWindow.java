@@ -172,6 +172,13 @@ public final class MainWindow implements StudyView, WorkspaceContext {
         QuizPanel quizPanel = new QuizPanel(controller, this);
         tabs.addTab("Quiz (F07-F08)", quizPanel);
         tabs.addTab("Weak Topics (F09)", new WeakTopicsPanel(controller, this));
+        StudyPlanPanel planPanel = new StudyPlanPanel(controller, this);
+        tabs.addTab("Study Plan (F10)", planPanel);
+        courseList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                planPanel.showSavedPlan();
+            }
+        });
         courseList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 quizPanel.reloadQuizzes(null);

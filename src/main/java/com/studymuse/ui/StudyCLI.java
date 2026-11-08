@@ -8,6 +8,8 @@ import com.studymuse.domain.Deck;
 import com.studymuse.domain.Difficulty;
 import com.studymuse.domain.Flashcard;
 import com.studymuse.domain.Material;
+import com.studymuse.domain.PlanRequest;
+import com.studymuse.domain.StudyPlan;
 import com.studymuse.domain.Question;
 import com.studymuse.domain.QuestionType;
 import com.studymuse.domain.Quiz;
@@ -158,6 +160,15 @@ public class StudyCLI implements StudyView {
                         showResult(sb.toString());
                     }
                 }
+                case "plan" -> {
+                    need(t, 2, "plan <courseId> --exam YYYY-MM-DD --hours 2 [--topics \"A,B\"]  |  plan <courseId> show");
+                    if (t.size() > 2 && t.get(2).equalsIgnoreCase("show")) {
+                        showResult(controller.getPlan(t.get(1)).map(StudyPlan::toText)
+                                .orElse("No study plan yet. Create one: plan " + t.get(1) + " --exam YYYY-MM-DD --hours 2"));
+                    } else {
+                        makePlan(t);
+                    }
+                }
                 case "weak-topics" -> {
                     need(t, 2, "weak-topics <courseId>");
                     showResult("Analysing your quiz and flashcard history ...");
@@ -278,6 +289,31 @@ public class StudyCLI implements StudyView {
         showResult("\nGrading with " + controller.getLlmName() + " ...");
         QuizResult result = controller.submitQuiz(courseId, quizId, answers);
         showResult(result.toText());
+    }
+
+    /** F10: parse exam date, hours and optional topics, then build and print the plan. */
+    private void makePlan(List<String> t) {
+        String exam = option(t, "--exam", null);
+        if (exam == null) {
+            throw new StudyException("Give the exam date, e.g. --exam 2026-11-20");
+        }
+        LocalDate examDate;
+        try {
+            examDate = LocalDate.parse(exam);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new StudyException("Exam date must look like 2026-11-20.");
+        }
+        double hours;
+        try {
+            hours = Double.parseDouble(option(t, "--hours", "2"));
+        } catch (NumberFormatException e) {
+            throw new StudyException("Hours must be a number, e.g. --hours 1.5");
+        }
+        String topics = option(t, "--topics", "");
+        showResult("Finding weak topics and planning with " + controller.getLlmName() + " ...");
+        StudyPlan plan = controller.generatePlan(t.get(1),
+                new PlanRequest(examDate, hours, topics.isBlank() ? List.of() : Arrays.asList(topics.split(","))));
+        showResult(plan.toText());
     }
 
     /** Value after a --flag, or the default when the flag is absent. */
@@ -443,6 +479,8 @@ public class StudyCLI implements StudyView {
                   quizzes <courseId>                   list saved quizzes
                   quiz take <courseId> <quizId>        answer a quiz and get graded feedback (F08)
                   weak-topics <courseId>               find weak topics and why you miss them (F09)
+                  plan <courseId> --exam YYYY-MM-DD --hours 2 [--topics "A,B"]   day-by-day study plan (F10)
+                  plan <courseId> show                 show the saved plan
                   help | exit""";
     }
 

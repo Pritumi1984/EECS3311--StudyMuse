@@ -19,6 +19,7 @@ public class Course {
     private final List<Quiz> quizzes = new ArrayList<>();
     private final List<QuizResult> quizResults = new ArrayList<>();
     private final List<WeakTopic> weakTopics = new ArrayList<>();
+    private StudyPlan studyPlan;
 
     public Course(String id, String name) {
         this.id = id;
@@ -39,6 +40,9 @@ public class Course {
     public List<QuizResult> getQuizResults() { return List.copyOf(quizResults); }
     public void addQuizResult(QuizResult r) { quizResults.add(r); }
     public List<WeakTopic> getWeakTopics() { return List.copyOf(weakTopics); }
+
+    public StudyPlan getStudyPlan() { return studyPlan; }
+    public void setStudyPlan(StudyPlan plan) { this.studyPlan = plan; }
 
     /** Latest weak-topic analysis, kept for the study planner (F10). */
     public void setWeakTopics(List<WeakTopic> latest) {
@@ -140,6 +144,7 @@ public class Course {
             wt.add(w.toMap());
         }
         m.put("weakTopics", wt);
+        m.put("studyPlan", studyPlan == null ? null : studyPlan.toMap());
         return m;
     }
 
@@ -165,6 +170,9 @@ public class Course {
         }
         for (Object o : Json.list(m, "weakTopics")) {
             c.weakTopics.add(WeakTopic.fromMap(Json.obj(o)));
+        }
+        if (m.get("studyPlan") != null) {
+            c.studyPlan = StudyPlan.fromMap(Json.obj(m.get("studyPlan")));
         }
         return c;
     }
