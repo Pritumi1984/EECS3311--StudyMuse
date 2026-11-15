@@ -24,7 +24,8 @@ public final class LLMProviderFactory {
             warning = "No LLM_API_KEY in .env - running in offline MOCK mode (answers are placeholders).";
             base = new MockLLMProvider();
         } else if ("gemini".equals(name)) {
-            base = new GeminiProvider(key, config.getModel(GeminiProvider.DEFAULT_MODEL));
+            base = new GeminiProvider(key, config.getModel(GeminiProvider.DEFAULT_MODEL),
+                    config.get("LLM_THINKING", GeminiProvider.DEFAULT_THINKING));
         } else if ("claude".equals(name) || "anthropic".equals(name)) {
             base = new ClaudeProvider(key, config.getModel(ClaudeProvider.DEFAULT_MODEL));
         } else {

@@ -17,19 +17,41 @@ public class GeminiProvider implements LLMProvider {
     public static final String DEFAULT_MODEL = "gemini-3.8-flash";
     private static final String BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
 
+    /** Gemini 3 models think at "high" by default, which is slow; "low" is much faster and enough here. */
+    public static final String DEFAULT_THINKING = "low";
+
     private final String apiKey;
     private final String model;
+    private volatile String thinkingLevel;
 
     public GeminiProvider(String apiKey, String model) {
+        this(apiKey, model, DEFAULT_THINKING);
+    }
+
+    public GeminiProvider(String apiKey, String model, String thinkingLevel) {
         this.apiKey = apiKey;
         this.model = model;
+        this.thinkingLevel = thinkingLevel == null || thinkingLevel.isBlank() || !model.startsWith("gemini-3")
+                ? null : thinkingLevel.trim().toLowerCase();
     }
 
     @Override
     public LLMResponse send(Prompt prompt) {
-        Map<String, Object> reply = HttpJson.post(BASE + model + ":generateContent",
-                Map.of("x-goog-api-key", apiKey), toRequestJson(prompt), "Gemini");
-        return fromResponseJson(reply);
+        try {
+            return fromResponseJson(post(prompt));
+        } catch (LLMException e) {
+            // a model that does not accept this thinking setting answers 400: retry once without it
+            if (thinkingLevel != null && e.getMessage() != null && e.getMessage().toLowerCase().contains("thinking")) {
+                thinkingLevel = null;
+                return fromResponseJson(post(prompt));
+            }
+            throw e;
+        }
+    }
+
+    private Map<String, Object> post(Prompt prompt) {
+        return HttpJson.post(BASE + model + ":generateContent", Map.of("x-goog-api-key", apiKey),
+                toRequestJson(prompt), "Gemini");
     }
 
     private Map<String, Object> toRequestJson(Prompt prompt) {
@@ -43,7 +65,16 @@ public class GeminiProvider implements LLMProvider {
             contents.add(Map.of("role", role, "parts", List.of(Map.of("text", m.text()))));
         }
         body.put("contents", contents);
-        body.put("generationConfig", Map.of("temperature", 0.3));
+        Map<String, Object> config = new LinkedHashMap<>();
+        if (model.startsWith("gemini-3")) {
+            // Google recommends the default temperature (1.0) for Gemini 3; lower values can cause looping
+            if (thinkingLevel != null) {
+                config.put("thinkingConfig", Map.of("thinkingLevel", thinkingLevel));
+            }
+        } else {
+            config.put("temperature", 0.3);
+        }
+        body.put("generationConfig", config);
         return body;
     }
 
