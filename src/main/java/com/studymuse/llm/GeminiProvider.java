@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public class GeminiProvider implements LLMProvider {
 
-    public static final String DEFAULT_MODEL = "gemini-2.5-flash";
+    public static final String DEFAULT_MODEL = "gemini-3.8-flash";
     private static final String BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
 
     private final String apiKey;
