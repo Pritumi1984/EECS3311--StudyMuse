@@ -20,7 +20,7 @@ public class GeminiProvider implements LLMProvider {
     /** Gemini 3 models think at "high" by default, which is slow; "low" is much faster and enough here. */
     public static final String DEFAULT_THINKING = "low";
     /** Tried in order when the main model is overloaded or unavailable. */
-    public static final String DEFAULT_FALLBACK_MODELS = "gemini-3.6-flash,gemini-3.5-flash-lite";
+    public static final String DEFAULT_FALLBACK_MODELS = "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.6-flash";
 
     private final String apiKey;
     private final String model;
