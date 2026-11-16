@@ -1,0 +1,127 @@
+classDiagram
+direction TB
+class MainWindow {
+  +show()
+  +runInBackground()
+}
+class StudyCLI {
+  +run(args)
+  +onProgressUpdated(e)
+}
+class DashboardView {
+  +refresh()
+  +onProgressUpdated(e)
+}
+class StudyAgentController {
+  <<Facade>>
+  +uploadMaterial() +summarize() +askQuestion()
+  +extractConcepts() +generateFlashcards() +reviewCard()
+  +generateQuiz() +submitQuiz() +getWeakTopics()
+  +generatePlan() +getProgress() +chat()
+}
+class MaterialService {
+  +upload() +getMaterial() +rebuildIndex()
+}
+class MaterialAnalysisService {
+  +summarize() +extractConcepts()
+}
+class QAService {
+  +answer()
+}
+class FlashcardService {
+  +generate() +saveDeck() +getDueCards() +review()
+}
+class SpacedRepetitionScheduler {
+  +nextReview()
+}
+class QuizService {
+  +generate() +grade()
+}
+class GradingStrategy {
+  <<interface>>
+  +grade(q, answer) GradeResult
+}
+class MultipleChoiceGrader
+class ShortAnswerGrader
+class AnalyticsService {
+  +findWeakTopics()
+}
+class StudyPlanService {
+  +generatePlan() +setSessionDone()
+}
+class PlanValidator {
+  +validate()
+}
+class ProgressTracker {
+  <<Observer subject>>
+  +addObserver() +recordQuizResult()
+  +recordReview() +recordPlanSession() +getStats()
+}
+class ProgressObserver {
+  <<interface>>
+  +onProgressUpdated(e)
+}
+class DocumentReaderFactory {
+  <<Factory Method>>
+  +createReader(file) DocumentReader
+}
+class DocumentReader {
+  <<interface>>
+  +supports(ext) +readText(file)
+}
+class PlainTextDocumentReader
+class PdfDocumentReader {
+  <<Adapter>>
+}
+class TextChunker {
+  +split()
+}
+class SearchIndex {
+  +add() +search(courseId, query, k)
+}
+class CourseRepository {
+  <<interface>>
+  +saveCourse() +findCourse() +saveMaterial()
+}
+class JsonCourseRepository
+class AppConfig {
+  <<Singleton>>
+  +getInstance()$ AppConfig
+  +getApiKey() +getDataDir()
+}
+class StructuredLLMCall {
+  +ask(prompt) Map
+}
+MainWindow --> StudyAgentController
+StudyCLI --> StudyAgentController
+MainWindow *-- DashboardView
+StudyAgentController --> MaterialService
+StudyAgentController --> MaterialAnalysisService
+StudyAgentController --> QAService
+StudyAgentController --> FlashcardService
+StudyAgentController --> QuizService
+StudyAgentController --> AnalyticsService
+StudyAgentController --> StudyPlanService
+StudyAgentController --> ProgressTracker
+MaterialService --> DocumentReaderFactory
+DocumentReaderFactory ..> DocumentReader : creates
+DocumentReader <|.. PlainTextDocumentReader
+DocumentReader <|.. PdfDocumentReader
+MaterialService --> TextChunker
+MaterialService --> SearchIndex
+MaterialService --> CourseRepository
+CourseRepository <|.. JsonCourseRepository
+FlashcardService --> SpacedRepetitionScheduler
+QuizService --> GradingStrategy
+GradingStrategy <|.. MultipleChoiceGrader
+GradingStrategy <|.. ShortAnswerGrader
+StudyPlanService --> PlanValidator
+ProgressTracker o-- ProgressObserver
+ProgressObserver <|.. DashboardView
+ProgressObserver <|.. StudyCLI
+FlashcardService --> ProgressTracker
+QuizService --> ProgressTracker
+StudyPlanService --> ProgressTracker
+QAService --> StructuredLLMCall
+QuizService --> StructuredLLMCall
+JsonCourseRepository ..> AppConfig

@@ -1,0 +1,126 @@
+classDiagram
+direction TB
+class StudyAgentController {
+  <<Facade>>
+  +chat(courseId, message) AgentResponse
+  +runTool() +listTools()
+}
+class AgentPlanner {
+  -maxSteps = 10
+  +run(courseId, request) AgentResponse
+  ~decideNextAction(ctx) AgentAction
+}
+class MemoryManager {
+  +addMessage() +rememberFact()
+  +getRelevantContext() +extractExamDate()$
+}
+class ConversationHistory {
+  -MAX_MESSAGES = 20
+  +add() +recent(n)
+}
+class PromptBuilder {
+  <<Builder>>
+  +withSystemInstructions() +withContext()
+  +withMemory() +withTools()
+  +withOutputFormat() +withUserRequest()
+  +build() Prompt
+}
+class ResponseParser {
+  +parseJson() +parseAction()
+  +validateToolCall() +validateCitations()
+}
+class StructuredLLMCall {
+  +ask(prompt) Map
+}
+class AgentContext {
+  +addStep() +stepCount() +stepsForPrompt()
+}
+class AgentStep
+class AgentAction {
+  type toolName arguments text remember
+}
+class ActionType {
+  <<enumeration>>
+  TOOL_CALL
+  FINAL_ANSWER
+  ASK_CLARIFICATION
+}
+class AgentResponse {
+  answer steps stoppedAtLimit
+}
+class ToolRegistry {
+  +register() +get() +describeForPrompt()
+  +execute(name, args) ToolResult
+}
+class StudyTool {
+  <<interface>>
+  +getName() +getParameters()
+  +validateArgs(args) +execute(args) ToolResult
+}
+class SearchMaterialsTool
+class GenerateQuizTool
+class GenerateFlashcardsTool
+class MistakesToFlashcardsTool
+class GetWeakTopicsTool
+class CreateStudyPlanTool
+class GetProgressTool
+class LLMClient {
+  +complete(prompt) String
+}
+class LLMProvider {
+  <<interface / Strategy>>
+  +send(prompt) LLMResponse
+  +getName()
+}
+class GeminiProvider {
+  <<Adapter>>
+}
+class ClaudeProvider {
+  <<Adapter>>
+}
+class MockLLMProvider
+class LLMProviderDecorator {
+  <<abstract Decorator>>
+  #wrapped LLMProvider
+}
+class RetryingProvider
+class LoggingProvider
+class LLMProviderFactory {
+  <<Factory Method>>
+  +create(config) LLMProvider
+}
+class AppConfig {
+  <<Singleton>>
+}
+StudyAgentController --> AgentPlanner
+AgentPlanner --> MemoryManager
+AgentPlanner --> ToolRegistry
+AgentPlanner --> ResponseParser
+AgentPlanner --> LLMClient
+AgentPlanner ..> PromptBuilder : uses
+AgentPlanner ..> AgentContext : creates
+AgentPlanner ..> AgentResponse : returns
+MemoryManager *-- ConversationHistory
+AgentContext *-- AgentStep
+AgentStep *-- AgentAction
+AgentAction --> ActionType
+ToolRegistry o-- StudyTool
+StudyTool <|.. SearchMaterialsTool
+StudyTool <|.. GenerateQuizTool
+StudyTool <|.. GenerateFlashcardsTool
+StudyTool <|.. MistakesToFlashcardsTool
+StudyTool <|.. GetWeakTopicsTool
+StudyTool <|.. CreateStudyPlanTool
+StudyTool <|.. GetProgressTool
+StructuredLLMCall --> LLMClient
+StructuredLLMCall --> ResponseParser
+LLMClient --> LLMProvider
+LLMProvider <|.. GeminiProvider
+LLMProvider <|.. ClaudeProvider
+LLMProvider <|.. MockLLMProvider
+LLMProvider <|.. LLMProviderDecorator
+LLMProviderDecorator <|-- RetryingProvider
+LLMProviderDecorator <|-- LoggingProvider
+LLMProviderDecorator o-- LLMProvider : wraps
+LLMProviderFactory ..> LLMProvider : creates
+LLMProviderFactory ..> AppConfig : reads
