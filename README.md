@@ -4,6 +4,29 @@ StudyMuse is a Java desktop study assistant: a student uploads course materials,
 
 **Author:** Pritumi Patel (Student # 220113734)
 
+> ## 🎥 Stage 2 demo video (for graders)
+>
+> **▶ [Watch the demo video on YouTube](https://youtu.be/52UNcdiYzyU)** (public, about 25 minutes, no sign-in needed)
+>
+> The video shows the agent running in both the **GUI** (F01–F12) and the **CLI**. Click a time to jump to that feature.
+>
+> 📄 **Stage 2 report:** [stage2-report.pdf](stage2-report.pdf) (the same links are in Section 7 of the report; screenshots of the agent running are in Section 1 and in [docs/stage2/screenshots](docs/stage2/screenshots))
+
+| Feature | Name | GUI | CLI |
+|---|---|---|---|
+| F01 | Course and material upload | [1:03](https://youtu.be/52UNcdiYzyU?t=63s) | [20:19](https://youtu.be/52UNcdiYzyU?t=1219s) |
+| F02 | Material summarization | [2:21](https://youtu.be/52UNcdiYzyU?t=141s) | — |
+| F03 | Question answering over materials | [3:31](https://youtu.be/52UNcdiYzyU?t=211s) | [21:14](https://youtu.be/52UNcdiYzyU?t=1274s) |
+| F04 | Key concept extraction | [4:49](https://youtu.be/52UNcdiYzyU?t=289s) | — |
+| F05 | Flashcard generation | [5:27](https://youtu.be/52UNcdiYzyU?t=327s) | — |
+| F06 | Flashcard review (spaced repetition) | [6:29](https://youtu.be/52UNcdiYzyU?t=389s) | — |
+| F07 | Quiz generation | [7:44](https://youtu.be/52UNcdiYzyU?t=464s) | [21:28](https://youtu.be/52UNcdiYzyU?t=1288s) |
+| F08 | Quiz grading and feedback | [9:01](https://youtu.be/52UNcdiYzyU?t=541s) | — |
+| F09 | Weak-topic identification | [10:45](https://youtu.be/52UNcdiYzyU?t=645s) | [22:17](https://youtu.be/52UNcdiYzyU?t=1337s) |
+| F10 | Personalized study plan | [11:32](https://youtu.be/52UNcdiYzyU?t=692s) | [23:19](https://youtu.be/52UNcdiYzyU?t=1399s) |
+| F11 | Progress dashboard | [12:58](https://youtu.be/52UNcdiYzyU?t=778s) | [24:04](https://youtu.be/52UNcdiYzyU?t=1444s) |
+| F12 | Agent chat (multi-step tools + memory) | [14:00](https://youtu.be/52UNcdiYzyU?t=840s) | [18:08](https://youtu.be/52UNcdiYzyU?t=1088s), [24:17](https://youtu.be/52UNcdiYzyU?t=1457s) |
+
 ## Stage 1 — Design (submitted)
 
 * [Stage 1 Design Report (PDF)](StudyMuse_Stage1_Report_FINAL.pdf)
