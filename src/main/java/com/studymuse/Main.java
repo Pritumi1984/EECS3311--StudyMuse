@@ -91,7 +91,10 @@ public final class Main {
     public static void main(String[] args) {
         StudyAgentController controller = buildController();
         if (args.length > 0 && args[0].equalsIgnoreCase("cli")) {
-            new StudyCLI(controller).run(Arrays.copyOfRange(args, 1, args.length));
+            int code = new StudyCLI(controller).run(Arrays.copyOfRange(args, 1, args.length));
+            if (code != 0) {
+                System.exit(code); // lets scripts and test tools detect failed commands
+            }
         } else {
             MainWindow.launch(controller);
         }

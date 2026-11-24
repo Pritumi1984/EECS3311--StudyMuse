@@ -40,6 +40,7 @@ public class AgentPlanner {
         memory.addMessage(courseId, MemoryManager.message("user", request));
         AgentContext ctx = new AgentContext(courseId, request);
         String answer = null;
+        String outcome = "STEP_LIMIT";
         while (ctx.stepCount() < maxSteps) {
             AgentAction action;
             try {
@@ -51,11 +52,13 @@ public class AgentPlanner {
             } catch (LLMException e) {
                 answer = "I couldn't reach the AI service (" + e.getMessage() + "). "
                         + (ctx.stepCount() > 0 ? "Steps completed so far are listed below." : "Please try again in a moment.");
+                outcome = "LLM_ERROR";
                 break;
             }
             remember(courseId, action);
             if (action.type() == ActionType.FINAL_ANSWER || action.type() == ActionType.ASK_CLARIFICATION) {
                 answer = action.text().trim();
+                outcome = action.type().name();
                 break;
             }
             ValidationResult check = parser.validateToolCall(action, tools);
@@ -73,7 +76,7 @@ public class AgentPlanner {
                     + "you can ask me to continue.";
         }
         memory.addMessage(courseId, MemoryManager.message("assistant", answer));
-        return new AgentResponse(answer, ctx.getSteps(), stopped);
+        return new AgentResponse(answer, ctx.getSteps(), stopped, outcome);
     }
 
     AgentAction decideNextAction(AgentContext ctx) {

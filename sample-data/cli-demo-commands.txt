@@ -1,0 +1,10 @@
+# StudyMuse CLI script: run with   run.bat cli --file sample-data/cli-demo-commands.txt
+# or pipe it in with               run.bat cli < sample-data/cli-demo-commands.txt
+# One command per line; lines starting with # are comments.
+course create Demo
+upload demo sample-data/uml-notes.md
+ask demo "What is a sequence diagram?"
+quiz generate demo --topics "Sequence diagram,Class diagram" --count 3
+weak-topics demo
+agent demo --json "Quiz me on class diagrams with 3 questions"
+progress demo

@@ -29,7 +29,11 @@ import com.studymuse.util.Json;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -49,6 +53,9 @@ public final class StudyCLI implements StudyView, ProgressObserver {
 
     private final StudyAgentController controller;
     private final BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+    /** Where results go: the console normally, a buffer when a command arrives through the HTTP API. */
+    private PrintStream out = System.out;
+    private int errorCount;
 
     public StudyCLI(StudyAgentController controller) {
         this.controller = controller;
@@ -58,35 +65,154 @@ public final class StudyCLI implements StudyView, ProgressObserver {
     /** OBSERVER: the CLI prints a one-line notice whenever progress changes. */
     @Override
     public void onProgressUpdated(ProgressEvent event) {
-        System.out.println("  [progress] " + event.description());
+        out.println("  [progress] " + event.description());
     }
 
-    public void run(String[] args) {
+    /**
+     * Runs the CLI and returns an exit code (0 = every command succeeded, 1 = at least one error).
+     * Input can come from:
+     *   - command-line arguments:  run.bat cli ask eecs3311 "What is UML?"
+     *   - a script file:           run.bat cli --file commands.txt   (one command per line, # = comment)
+     *   - standard input:          run.bat cli < commands.txt   or   type commands.txt | run.bat cli
+     *   - the keyboard:            run.bat cli   (interactive "studymuse>" prompt)
+     *   - HTTP:                    run.bat cli serve 8080   (see StudyApiServer)
+     */
+    public int run(String[] args) {
+        if (args.length > 0 && (args[0].equals("--file") || args[0].equals("-f"))) {
+            if (args.length < 2) {
+                showError("Usage: --file <commands.txt>");
+                return 2;
+            }
+            runScript(Paths.get(args[1]));
+            return errorCount > 0 ? 1 : 0;
+        }
         if (args.length > 0) {
             dispatch(Arrays.asList(args));
-            return;
+            return errorCount > 0 ? 1 : 0;
         }
-        showResult("StudyMuse CLI - AI provider: " + controller.getLlmName() + "\nType 'help' for commands, 'exit' to quit.");
+        boolean interactive = System.console() != null;
+        if (interactive) {
+            showResult("StudyMuse CLI - AI provider: " + controller.getLlmName() + "\nType 'help' for commands, 'exit' to quit.");
+        }
         while (true) {
-            System.out.print("\nstudymuse> ");
+            if (interactive) {
+                out.print("\nstudymuse> ");
+            }
             String line;
             try {
                 line = in.readLine();
             } catch (IOException e) {
-                return;
+                break;
             }
             if (line == null) {
-                return;
+                break;
             }
-            List<String> tokens = tokenize(line);
-            if (tokens.isEmpty()) {
-                continue;
+            if (!interactive && !line.isBlank() && !line.trim().startsWith("#")) {
+                out.println("\nstudymuse> " + line.trim()); // echo piped commands so the output reads like a session
             }
-            if (tokens.get(0).equalsIgnoreCase("exit") || tokens.get(0).equalsIgnoreCase("quit")) {
-                return;
+            if (!runLine(line)) {
+                break;
             }
-            dispatch(tokens);
         }
+        return interactive ? 0 : errorCount > 0 ? 1 : 0;
+    }
+
+    /** Runs one command line; returns false when it was "exit". Blank lines and # comments are skipped. */
+    private boolean runLine(String line) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+            return true;
+        }
+        List<String> tokens = tokenize(trimmed);
+        if (tokens.get(0).equalsIgnoreCase("exit") || tokens.get(0).equalsIgnoreCase("quit")) {
+            return false;
+        }
+        dispatch(tokens);
+        return true;
+    }
+
+    /** Runs every command in a text file, one per line, echoing each command before its output. */
+    void runScript(Path file) {
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(file, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            showError("Cannot read command file " + file + ": " + e.getMessage());
+            return;
+        }
+        for (String line : lines) {
+            if (!line.isBlank() && !line.trim().startsWith("#")) {
+                out.println("\nstudymuse> " + line.trim());
+            }
+            if (!runLine(line)) {
+                return;
+            }
+        }
+    }
+
+    /** HTTP API helper: runs one CLI command and returns everything it printed. */
+    synchronized Map<String, Object> runCaptured(String commandLine) {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        PrintStream previous = out;
+        int errorsBefore = errorCount;
+        out = new PrintStream(buffer, true, StandardCharsets.UTF_8);
+        try {
+            runLine(commandLine);
+        } finally {
+            out.flush();
+            out = previous;
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("command", commandLine);
+        result.put("success", errorCount == errorsBefore);
+        result.put("output", buffer.toString(StandardCharsets.UTF_8).trim());
+        return result;
+    }
+
+    /**
+     * F12 for scripts and automated tests: agent <courseId> [--json] [--input-file <path>] <message | ->
+     * The message comes from the arguments, from a file, or from standard input ("-").
+     * --json prints the answer, outcome and every step (tool, arguments, result) as JSON.
+     */
+    private void agentCommand(List<String> t) throws IOException {
+        need(t, 3, "agent <courseId> [--json] [--input-file <path>] <message | ->");
+        String courseId = t.get(1);
+        boolean json = false;
+        String inputFile = null;
+        List<String> words = new ArrayList<>();
+        for (int i = 2; i < t.size(); i++) {
+            String a = t.get(i);
+            if (a.equals("--json")) {
+                json = true;
+            } else if (a.equals("--input-file") && i + 1 < t.size()) {
+                inputFile = t.get(++i);
+            } else {
+                words.add(a);
+            }
+        }
+        String message;
+        if (inputFile != null) {
+            message = Files.readString(Paths.get(inputFile), StandardCharsets.UTF_8);
+        } else if (words.size() == 1 && words.get(0).equals("-")) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = in.readLine()) != null) {
+                sb.append(line).append('\n');
+            }
+            message = sb.toString();
+        } else {
+            message = String.join(" ", words);
+        }
+        AgentResponse r = controller.chat(courseId, message);
+        if (json) {
+            showResult(Json.stringify(r.toJsonMap()));
+        } else {
+            showResult("Agent: " + r.toText());
+        }
+    }
+
+    StudyAgentController getController() {
+        return controller;
     }
 
     /** F12: one request to the agent; prints its answer and the tools it used. */
@@ -100,7 +226,7 @@ public final class StudyCLI implements StudyView, ProgressObserver {
         controller.getCourse(courseId);
         showResult("Chatting with the StudyMuse agent about '" + courseId + "'. Type 'back' to return.");
         while (true) {
-            System.out.print("\nyou> ");
+            out.print("\nyou> ");
             String line;
             try {
                 line = in.readLine();
@@ -246,6 +372,12 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                         chatLoop(t.get(1));
                     }
                 }
+                case "agent" -> agentCommand(t);
+                case "run" -> {
+                    need(t, 2, "run <commands.txt>");
+                    runScript(Paths.get(t.get(1)));
+                }
+                case "serve" -> new StudyApiServer(this).start(t.size() > 1 ? Integer.parseInt(t.get(1)) : 8080);
                 case "memory" -> {
                     need(t, 2, "memory <courseId>");
                     showResult(controller.getMemorySummary(t.get(1)));
@@ -276,6 +408,8 @@ public final class StudyCLI implements StudyView, ProgressObserver {
             }
         } catch (StudyException | IllegalArgumentException e) {
             showError(e.getMessage());
+        } catch (IOException e) {
+            showError("Could not read input: " + e.getMessage());
         } catch (RuntimeException e) {
             showError("Unexpected error: " + e);
         }
@@ -289,7 +423,7 @@ public final class StudyCLI implements StudyView, ProgressObserver {
         if (deck.getCards().size() < count) {
             showResult("Note: only " + deck.getCards().size() + " valid cards were created (asked for " + count + ").");
         }
-        System.out.print("Numbers of cards to delete (e.g. 2 5), Enter to keep all, or 'cancel': ");
+        out.print("Numbers of cards to delete (e.g. 2 5), Enter to keep all, or 'cancel': ");
         String reply;
         try {
             reply = in.readLine();
@@ -355,12 +489,12 @@ public final class StudyCLI implements StudyView, ProgressObserver {
         Map<String, String> answers = new LinkedHashMap<>();
         int i = 1;
         for (Question q : quiz.getQuestions()) {
-            System.out.printf("%n%d. %s%n", i++, q.getText());
+            out.printf("%n%d. %s%n", i++, q.getText());
             char letter = 'A';
             for (String o : q.getOptions()) {
-                System.out.println("   " + letter++ + ") " + o);
+                out.println("   " + letter++ + ") " + o);
             }
-            System.out.print("   Your answer: ");
+            out.print("   Your answer: ");
             String a = readLine();
             if (a == null) {
                 break;
@@ -426,14 +560,14 @@ public final class StudyCLI implements StudyView, ProgressObserver {
         int reviewed = 0;
         int remembered = 0;
         for (Flashcard card : due) {
-            System.out.print("\n[" + card.getTopic() + "] " + card.getFront() + "\n  (Enter to flip) ");
+            out.print("\n[" + card.getTopic() + "] " + card.getFront() + "\n  (Enter to flip) ");
             String line = readLine();
             if (line == null || line.trim().equalsIgnoreCase("q")) {
                 break;
             }
             Rating rating = null;
             while (rating == null) {
-                System.out.print("  Answer: " + card.getBack() + "\n  Rate 1-4: ");
+                out.print("  Answer: " + card.getBack() + "\n  Rate 1-4: ");
                 line = readLine();
                 if (line == null || line.trim().equalsIgnoreCase("q")) {
                     break;
@@ -532,7 +666,7 @@ public final class StudyCLI implements StudyView, ProgressObserver {
     }
 
     private boolean confirm(String question) {
-        System.out.print(question);
+        out.print(question);
         try {
             String a = in.readLine();
             return a != null && a.trim().toLowerCase().startsWith("y");
@@ -552,7 +686,7 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                 Commands:
                   courses                              list courses
                   course create <name>                 create a course (F01)
-                  upload <courseId> <file> [--replace] import a .txt/.md file (F01)
+                  upload <courseId> <file> [--replace] import a .txt/.md/.pdf file (F01)
                   materials <courseId>                 list a course's materials
                   summarize <courseId> <material> [short|medium|detailed]   AI summary (F02)
                   ask <courseId> <question>            answer from your materials with sources (F03)
@@ -571,8 +705,14 @@ public final class StudyCLI implements StudyView, ProgressObserver {
                   tools                                list the agent's tools (F12)
                   tool <courseId> <name> [json]        run one agent tool directly, e.g. {'query': 'Observer'}
                   chat <courseId> [message]            talk to the AI agent (no message = chat mode)
+                  agent <courseId> [--json] [--input-file f] <message|->   one agent request; --json prints
+                                                       the outcome and every tool call (for scripts/tests)
                   memory <courseId>                    what the agent remembers for a course
-                  help | exit""";
+                  run <commands.txt>                   run the commands in a file, one per line
+                  serve [port]                         start the local HTTP API (default 8080)
+                  help | exit
+
+                Other ways to give input: run.bat cli --file commands.txt   |   run.bat cli < commands.txt""";
     }
 
     /** Splits a command line on spaces, keeping "quoted text" together. */
@@ -600,11 +740,12 @@ public final class StudyCLI implements StudyView, ProgressObserver {
 
     @Override
     public void showResult(String text) {
-        System.out.println(text);
+        out.println(text);
     }
 
     @Override
     public void showError(String message) {
-        System.out.println("Error: " + message);
+        errorCount++;
+        out.println("Error: " + message);
     }
 }

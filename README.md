@@ -70,6 +70,44 @@ studymuse> help
 
 A single command also works without the interactive prompt: `run.bat cli ask eecs3311 "What is a Facade?"`.
 
+### CLI input methods (for scripts and automated agent tests)
+
+The CLI accepts input in five ways (examples use `run.bat`; on macOS/Linux use `./run.sh`):
+
+| Input method | Example |
+|---|---|
+| Keyboard (interactive prompt) | `run.bat cli` |
+| Command-line arguments (one command) | `run.bat cli ask eecs3311 "What is a Facade?"` |
+| A command file (one command per line, `#` = comment) | `run.bat cli --file sample-data/cli-demo-commands.txt` |
+| Standard input (pipe or redirect) | `run.bat cli < sample-data/cli-demo-commands.txt` |
+| Local HTTP API | `run.bat cli serve 8080`, then `POST http://127.0.0.1:8080/api/agent` |
+
+**Agent requests with machine-readable output.** `agent <courseId> [--json] [--input-file <file>] <message | ->` sends one request to the agent. The message can be typed after the command, read from a file (`--input-file sample-data/agent-request.txt`) or read from standard input (`-`). With `--json` the CLI prints the outcome (`FINAL_ANSWER`, `ASK_CLARIFICATION`, `STEP_LIMIT` or `LLM_ERROR`), the answer, and every step with its tool name, arguments and result:
+
+```
+run.bat cli agent eecs3311 --json "Quiz me on Observer with 3 questions"
+{
+  "outcome": "FINAL_ANSWER",
+  "answer": "...",
+  "toolsUsed": ["generate_quiz"],
+  "stepCount": 1,
+  "stoppedAtLimit": false,
+  "steps": [ { "step": 1, "action": "TOOL_CALL", "tool": "generate_quiz",
+               "arguments": { "topics": ["Observer"], "count": 3 }, "success": true, "result": "..." } ]
+}
+```
+
+**HTTP API** (listens on 127.0.0.1 only; JSON in and out):
+
+| Request | Body | Returns |
+|---|---|---|
+| `GET /api/health` | | status and AI provider |
+| `GET /api/tools` | | the agent's tools |
+| `POST /api/agent` | `{"courseId": "eecs3311", "message": "..."}` | same JSON as `agent --json` |
+| `POST /api/command` | `{"command": "ask eecs3311 What is UML?"}` | the output of any CLI command |
+
+In every non-interactive mode the process exits with code 0 when all commands succeed and 1 when any command reports an error, so scripts and test tools can detect failures.
+
 ### Implemented so far
 
 | Feature | Status | GUI | CLI |
